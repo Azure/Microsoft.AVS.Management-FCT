@@ -49,7 +49,7 @@ After making sure you have enough quota on your desired subscription, please fol
 1. Log into Azure in your default browser on your local machine.
 2. Navigate to project folder in terminal and run `az login`. This will log you in to your Azure account.
 2. Run `az account set --subscription <subscription_id>`. This will set the subscription you want to use for your pipeline. Please replace `<subscription_id>` with your subscription ID mentioned above.
-3. Change up the `main.bicep` to fit your needs. You can change the location, name, tags, cloud version, etc. ([click here to learn more about Bicep ](https://learn.microsoft.com/en-us/azure/templates/Microsoft.AVS/2022-05-01/privateclouds?pivots=deployment-language-bicep)). After changing and saving the file please run `az bicep build --file main.bicep` to build your `main.json` file. Please verify your `main.json` got changed accordingly by checking the file. 
+3. Change up the `main.bicep` to fit your needs. You can change the location, name, tags, cloud version, etc. ([click here to learn more about Bicep](https://learn.microsoft.com/en-us/azure/templates/Microsoft.AVS/2022-05-01/privateclouds?pivots=deployment-language-bicep)). After changing and saving the file please run `az bicep build --file main.bicep` to build your `main.json` file. Please verify your `main.json` got changed accordingly by checking the file. 
 
 ### **Configuring the pipeline**
 
