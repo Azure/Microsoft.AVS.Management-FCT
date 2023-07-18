@@ -10,4 +10,4 @@ For help and questions about using this project, please work with your AVS conta
 
 ## Microsoft Support Policy  
 
-Support for this **PROJECT or PRODUCT** is limited to the resources listed above.
+Support for this project is limited to the resources listed above.
