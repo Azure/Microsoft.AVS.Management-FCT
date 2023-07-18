@@ -1,0 +1,75 @@
+# # Midnight scheduled build (uncomment to enable)
+# schedules:
+#     - cron: '0 0 * * *'
+#       displayName: Daily midnight build
+#       branches:
+#         include:
+#         - main
+
+# This pipeline is triggered when changes are made to the 'main' branch.
+trigger:
+    - main
+
+# This pipeline will run on an Ubuntu virtual machine.
+pool:
+    vmImage: ubuntu-latest
+
+# Define variables to be used throughout the pipeline.
+variables:
+    privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
+    resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
+    subscriptionName: FCT Pipeline # Your Azure Subscription Name
+    system.debug: true # Set to 'true' to enable diagnostic tracing
+
+# Define the steps that will be executed in the pipeline.
+steps:
+    # LDAP/AD Integration
+    - task: AzureCLI@2
+      displayName: Set Variables
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: ps
+          scriptLocation: inlineScript
+          inlineScript: |
+              $subscriptionId = (az account show --query 'id' -o tsv)
+
+    # Deploy an ARM template to the specified resource group.
+    - task: AzureResourceGroupDeployment@2
+      displayName: Deploy ARM template to Resource Group
+      inputs:
+          azureSubscription: $(subscriptionName)
+          action: Create Or Update Resource Group
+          resourceGroupName: $(resourceGroupName)
+          templateLocation: Linked artifact # the ARM template is stored in this repository
+          csmFile: main.json # the ARM template file name that was created from outputting the ARM template from the Bicep file
+          deploymentMode: Incremental # only deploy resources that have changed
+
+    # Use the Azure CLI to set variables that will be used in the project code.
+    - task: AzureCLI@2
+      displayName: Set Variables
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              subscriptionId=$(az account show --query 'id' -o tsv)
+              echo "##vso[task.setvariable variable=SUBSCRIPTIONID]$subscriptionId"
+
+    - task: AzureCLI@2
+      displayName: Run Tests
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              dotnet test --logger trx
+
+    - task: PublishTestResults@2
+      condition: succeededOrFailed()
+      displayName: Publish Results
+      inputs:
+          testRunner: VSTest
+          testResultsFiles: "**/*.trx"
+          mergeTestResults: true
+          testRunTitle: "AVS Management Tests"
+          publishRunAttachments: true

@@ -1,0 +1,26 @@
+# .NET Core
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.vscode
+*.vs
+*.suo
+*.cache
+*.log
+*.vsix
+*.nupkg
+*.snupkg
+*.userprefs
+*.bak
+*.orig
+*.swp
+*.tmp
+*.tmp_proj
+*.ide
+
+# Visual Studio Code
+.vscode/
+.fake

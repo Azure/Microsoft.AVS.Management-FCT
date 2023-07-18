@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.18.4.5664",
+      "templateHash": "16458166870488974808"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "northcentralus",
+      "metadata": {
+        "description": "Specifies the location for resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.AVS/privateClouds",
+      "apiVersion": "2022-05-01",
+      "name": "Microsoft-AVS-Management",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "av36"
+      },
+      "properties": {
+        "availability": {
+          "strategy": "singleZone"
+        },
+        "internet": "Enabled",
+        "managementCluster": {
+          "clusterSize": 3
+        },
+        "networkBlock": "10.0.0.0/22"
+      },
+      "tags": {
+        "ENV": "Test"
+      }
+    }
+  ]
+}
