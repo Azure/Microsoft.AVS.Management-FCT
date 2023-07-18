@@ -15,6 +15,7 @@ This project provides a publicly available functional testing pipeline for the [
 - [**License**](license.txt)
 - [**Code of Conduct**](code-of-conduct.md)
 - [**Security**](security.md)
+- [**Support**](support.md)
 
 Overview of important files in this repository:
 
