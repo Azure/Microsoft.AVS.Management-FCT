@@ -1,5 +1,5 @@
 @description('PrivateCloud deployment variables.')
-param name string = deployment().name
+param name string = 'Microsoft-AVS-Management'
 param location string = resourceGroup().location
 param tag string = 'TEST'
 

@@ -5,13 +5,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "16598761753355186612"
+      "templateHash": "5074279263925942741"
     }
   },
   "parameters": {
     "name": {
       "type": "string",
-      "defaultValue": "[deployment().name]",
+      "defaultValue": "Microsoft-AVS-Management",
       "metadata": {
         "description": "PrivateCloud deployment variables."
       }
