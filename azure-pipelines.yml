@@ -23,16 +23,6 @@ variables:
 
 # Define the steps that will be executed in the pipeline.
 steps:
-    # LDAP/AD Integration
-    - task: AzureCLI@2
-      displayName: Set Variables
-      inputs:
-          azureSubscription: $(subscriptionName)
-          scriptType: ps
-          scriptLocation: inlineScript
-          inlineScript: |
-              $subscriptionId = (az account show --query 'id' -o tsv)
-
     # Deploy an ARM template to the specified resource group.
     - task: AzureResourceGroupDeployment@2
       displayName: Deploy ARM template to Resource Group
