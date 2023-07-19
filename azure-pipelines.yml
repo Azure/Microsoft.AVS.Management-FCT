@@ -19,7 +19,7 @@ variables:
     privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
     resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
     subscriptionName: FCT Pipeline # Your Azure Subscription Name
-    system.debug: true # Set to 'true' to enable diagnostic tracing
+    system.debug: false # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
 steps:

@@ -1,13 +1,9 @@
-@description('Specifies the location for resources.')
-param location string = 'northcentralus'
-
-@description('Specifies the name of the private cloud.')
+@description('privateCloud resource fields.')
 param name string = 'Microsoft-AVS-Management'
+param location string = 'northcentralus'
+param tag string = 'TEST'
 
-@description('Specifies the tag for the private cloud.')
-param tag string = 'Test'
-
-resource myResource 'Microsoft.AVS/privateClouds@2022-05-01' = {
+resource privateCloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
   name: name
   location: location
   sku: {

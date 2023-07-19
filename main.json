@@ -4,24 +4,32 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.18.4.5664",
-      "templateHash": "16458166870488974808"
+      "version": "0.19.5.34762",
+      "templateHash": "11278420722366386938"
     }
   },
   "parameters": {
+    "name": {
+      "type": "string",
+      "defaultValue": "Microsoft-AVS-Management",
+      "metadata": {
+        "description": "privateCloud resource fields."
+      }
+    },
     "location": {
       "type": "string",
-      "defaultValue": "northcentralus",
-      "metadata": {
-        "description": "Specifies the location for resources."
-      }
+      "defaultValue": "northcentralus"
+    },
+    "tag": {
+      "type": "string",
+      "defaultValue": "TEST"
     }
   },
   "resources": [
     {
       "type": "Microsoft.AVS/privateClouds",
       "apiVersion": "2022-05-01",
-      "name": "Microsoft-AVS-Management",
+      "name": "[parameters('name')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "av36"
@@ -37,7 +45,7 @@
         "networkBlock": "10.0.0.0/22"
       },
       "tags": {
-        "ENV": "Test"
+        "ENV": "[parameters('tag')]"
       }
     }
   ]
