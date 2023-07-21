@@ -1,6 +1,5 @@
 // Values inherited from azure-pipelines.yml variables & secrets
 param privateCloudName string
-param resourceGroupName string
 param location string
 @secure()
 param adminPassword string
@@ -48,7 +47,7 @@ resource vnetPrivateCloudPeering 'Microsoft.Network/virtualNetworks/virtualNetwo
   ]
   properties: {
     remoteVirtualNetwork: {
-      id:  resourceId(resourceGroupName, 'Microsoft.AVS/privateClouds', privateCloudName)
+      id:  resourceId(privateCloudName, 'Microsoft.AVS/privateClouds', privateCloudName)
     }
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
@@ -65,7 +64,7 @@ resource privateCloudAndVnetPeering 'Microsoft.Network/virtualNetworks/virtualNe
   ]
   properties: {
     remoteVirtualNetwork: {
-      id:  resourceId(resourceGroupName, 'Microsoft.Network/virtualNetworks', vnetName)
+      id:  resourceId(privateCloudName, 'Microsoft.Network/virtualNetworks', vnetName)
     }
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true

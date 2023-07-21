@@ -5,14 +5,11 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "11829355689874780615"
+      "templateHash": "18206229902733240550"
     }
   },
   "parameters": {
     "privateCloudName": {
-      "type": "string"
-    },
-    "resourceGroupName": {
       "type": "string"
     },
     "location": {
@@ -93,7 +90,7 @@
       "name": "[parameters('vnetCloudPeeringName')]",
       "properties": {
         "remoteVirtualNetwork": {
-          "id": "[resourceId(parameters('resourceGroupName'), 'Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
+          "id": "[resourceId(parameters('privateCloudName'), 'Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
         },
         "allowVirtualNetworkAccess": true,
         "allowForwardedTraffic": true,
@@ -113,7 +110,7 @@
       "name": "[parameters('cloudVnetPeeringName')]",
       "properties": {
         "remoteVirtualNetwork": {
-          "id": "[resourceId(parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+          "id": "[resourceId(parameters('privateCloudName'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
         },
         "allowVirtualNetworkAccess": true,
         "allowForwardedTraffic": true,

@@ -32,7 +32,7 @@ variables:
 
 # Define the steps that will be executed in the pipeline.
 steps:
-    # Deploy an ARM template to the specified resource group.
+    # DeployP an ARM template to the specified resource group.
     - task: AzureResourceGroupDeployment@2
       displayName: Deploy ARM template to Resource Group
       inputs:
@@ -45,7 +45,6 @@ steps:
           overrideParameters:
               | # additional parameters to pass to the ARM template
               -privateCloudName $(privateCloudName) 
-              -resourceGroupName $(resourceGroupName)
               -location $(location) 
               -adminPassword $(secret-adminPassword) 
               -adminUsername $(secret-adminUsername) 
