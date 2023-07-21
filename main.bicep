@@ -1,10 +1,19 @@
-@description('privateCloud resource fields.')
-param name string = 'Microsoft-AVS-Management'
-param location string = 'northcentralus'
+// Values inherited from azure-pipelines.yml variables & secrets
+param privateCloudName string
+param location string
+@secure()
+param adminPassword string
+param adminUsername string
+@secure()
+param domainAdminPassword string
+param domainAdminUsername string
+param domainName string
+
 param tag string = 'TEST'
 
+@description('Creates an AVS private cloud.')
 resource privateCloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
-  name: name
+  name: privateCloudName
   location: location
   sku: {
     name: 'av36'

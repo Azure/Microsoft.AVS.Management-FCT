@@ -1,4 +1,4 @@
-# # Midnight scheduled build (uncomment to enable)
+# # Midnight scheduled build (uncomment to enable!)
 # schedules:
 #     - cron: '0 0 * * *'
 #       displayName: Daily midnight build
@@ -19,6 +19,14 @@ variables:
     privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
     resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
     subscriptionName: FCT Pipeline # Your Azure Subscription Name
+    location: northcentralus # Your Azure Region
+    # Azure Pipeline Secret Variables
+    adminPassword: $(adminPassword)
+    adminUsername: $(adminUsername)
+    domainAdminPassword: $(domainAdminPassword)
+    domainAdminUsername: $(domainAdminUsername)
+    domainName: $(domainName)
+    # config variables
     system.debug: false # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
@@ -33,6 +41,7 @@ steps:
           templateLocation: Linked artifact # the ARM template is stored in this repository
           csmFile: main.json # the ARM template file name that was created from outputting the ARM template from the Bicep file
           deploymentMode: Incremental # only deploy resources that have changed
+          overrideParameters: "-privateCloudName $(privateCloudName) -location $(location) -adminPassword $(adminPassword) -adminUsername $(adminUsername) -domainAdminPassword $(domainAdminPassword) -domainAdminUsername $(domainAdminUsername) -domainName $(domainName)"
 
     # Use the Azure CLI to set variables that will be used in the project code.
     - task: AzureCLI@2
