@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "8894302621391355361"
+      "templateHash": "10186858294835403277"
     }
   },
   "parameters": {
@@ -177,46 +177,6 @@
       ],
       "metadata": {
         "description": "Creates a VM for LDAP."
-      }
-    },
-    {
-      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-      "apiVersion": "2023-02-01",
-      "name": "[parameters('vnetCloudPeeringName')]",
-      "properties": {
-        "remoteVirtualNetwork": {
-          "id": "[resourceId(parameters('privateCloudName'), 'Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
-        },
-        "allowVirtualNetworkAccess": true,
-        "allowForwardedTraffic": true,
-        "allowGatewayTransit": true,
-        "useRemoteGateways": false
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-      ],
-      "metadata": {
-        "description": "Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP."
-      }
-    },
-    {
-      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
-      "apiVersion": "2023-02-01",
-      "name": "[parameters('cloudVnetPeeringName')]",
-      "properties": {
-        "remoteVirtualNetwork": {
-          "id": "[resourceId(parameters('privateCloudName'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-        },
-        "allowVirtualNetworkAccess": true,
-        "allowForwardedTraffic": true,
-        "allowGatewayTransit": true,
-        "useRemoteGateways": false
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
-      ],
-      "metadata": {
-        "description": "Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP."
       }
     },
     {
