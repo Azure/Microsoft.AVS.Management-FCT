@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "10817823298385343488"
+      "templateHash": "10639310519785961839"
     }
   },
   "parameters": {
@@ -19,6 +19,15 @@
       "type": "securestring"
     },
     "adminUsername": {
+      "type": "string"
+    },
+    "domainAdminPassword": {
+      "type": "securestring"
+    },
+    "domainAdminUsername": {
+      "type": "string"
+    },
+    "domainName": {
       "type": "string"
     },
     "tag": {

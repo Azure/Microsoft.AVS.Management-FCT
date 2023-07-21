@@ -4,10 +4,10 @@ param location string
 @secure()
 param adminPassword string
 param adminUsername string
-// @secure()
-// param domainAdminPassword string
-// param domainAdminUsername string
-// param domainName string
+@secure()
+param domainAdminPassword string
+param domainAdminUsername string
+param domainName string
 
 // Values defined here
 param tag string = 'TEST'
