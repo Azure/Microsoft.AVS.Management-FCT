@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "3912074194878549151"
+      "templateHash": "10040201100652279386"
     }
   },
   "parameters": {
@@ -49,6 +49,10 @@
     "subnetName": {
       "type": "string",
       "defaultValue": "SUBNET"
+    },
+    "subnetId": {
+      "type": "string",
+      "defaultValue": "/subscriptions/7f1fae41-7708-4fa4-89b3-f6552cad2fc1/resourceGroups/Microsoft-AVS-Management/providers/Microsoft.Network/virtualNetworks/VNET/subnets/SUBNET"
     }
   },
   "resources": [
@@ -112,18 +116,18 @@
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
-      "apiVersion": "2023-02-01",
+      "apiVersion": "2021-08-01",
       "name": "[parameters('nicName')]",
       "location": "[parameters('location')]",
       "properties": {
         "ipConfigurations": [
           {
-            "name": "ipconfig1",
+            "name": "Ipv4config",
             "properties": {
-              "privateIPAddress": "10.0.0.10",
+              "privateIPAddressVersion": "IPv4",
               "privateIPAllocationMethod": "Static",
               "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'VNET', 'SUBNET')]"
+                "id": "[parameters('subnetId')]"
               }
             }
           }

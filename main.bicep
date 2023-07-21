@@ -18,6 +18,7 @@ param nicName string = 'NIC'
 // param cloudVnetPeeringName string = 'CLOUDtoVNET-PEERING'
 param vmName string = 'VM'
 param subnetName string = 'SUBNET'
+param subnetId string = '/subscriptions/7f1fae41-7708-4fa4-89b3-f6552cad2fc1/resourceGroups/Microsoft-AVS-Management/providers/Microsoft.Network/virtualNetworks/VNET/subnets/SUBNET'
 
 /*
 To ensure that your resources are created in the correct order and that 
@@ -75,18 +76,18 @@ resource privateCloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
 }
 
 @description('Creates a network interface for the LDAP VM.')
-resource nic 'Microsoft.Network/networkInterfaces@2023-02-01' = {
+resource nic 'Microsoft.Network/networkInterfaces@2021-08-01' = {
   name: nicName
   location: location
   properties: {
     ipConfigurations: [
       {
-        name: 'ipconfig1'
+        name: 'Ipv4config'
         properties: {
-          privateIPAddress: '10.0.0.10' // IP address subnet: 10.0.0.0/22
+          privateIPAddressVersion: 'IPv4'
           privateIPAllocationMethod: 'Static'
           subnet: {
-            id: resourceId('Microsoft.Network/virtualNetworks/subnets', 'VNET', 'SUBNET')
+            id: subnetId
           }
         }
       }
