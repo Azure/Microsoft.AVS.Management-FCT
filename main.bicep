@@ -18,6 +18,17 @@ param vnetCloudPeeringName string = 'VNETtoCLOUD-PEERING'
 param cloudVnetPeeringName string = 'CLOUDtoVNET-PEERING'
 param vmName string = '${privateCloudName}-VM'
 
+/*
+To ensure that your resources are created in the correct order and that 
+dependencies are met, please define your resources in the following order:
+	1. Virtual network 
+	2. Private cloud 
+	3. Network interface 
+	4. Virtual machine 
+	5. Virtual network peering 
+  6. LDAP extension
+*/
+
 @description('Creates a virtual network with a single subnet for LDAP.')
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
@@ -36,40 +47,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
         }
       }
     ]
-  }
-}
-
-@description('Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP.')
-resource vnetPrivateCloudPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
-  name: vnetCloudPeeringName
-  dependsOn: [
-    vnet
-  ]
-  properties: {
-    remoteVirtualNetwork: {
-      id:  resourceId(privateCloudName, 'Microsoft.AVS/privateClouds', privateCloudName)
-    }
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: true
-    allowGatewayTransit: true
-    useRemoteGateways: false
-  }
-}
-
-@description('Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP.')
-resource privateCloudAndVnetPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
-  name: cloudVnetPeeringName
-  dependsOn: [
-    privateCloud
-  ]
-  properties: {
-    remoteVirtualNetwork: {
-      id:  resourceId(privateCloudName, 'Microsoft.Network/virtualNetworks', vnetName)
-    }
-    allowVirtualNetworkAccess: true
-    allowForwardedTraffic: true
-    allowGatewayTransit: true
-    useRemoteGateways: false
   }
 }
 
@@ -152,6 +129,42 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
     }
   }
 }
+
+@description('Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP.')
+resource vnetPrivateCloudPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
+  name: vnetCloudPeeringName
+  dependsOn: [
+    vnet
+  ]
+  properties: {
+    remoteVirtualNetwork: {
+      id:  resourceId(privateCloudName, 'Microsoft.AVS/privateClouds', privateCloudName)
+    }
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: true
+    useRemoteGateways: false
+  }
+}
+
+
+@description('Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP.')
+resource privateCloudAndVnetPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-02-01' = {
+  name: cloudVnetPeeringName
+  dependsOn: [
+    privateCloud
+  ]
+  properties: {
+    remoteVirtualNetwork: {
+      id:  resourceId(privateCloudName, 'Microsoft.Network/virtualNetworks', vnetName)
+    }
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: true
+    useRemoteGateways: false
+  }
+}
+
 
 @description('Creates an extension for the LDAP VM to join an Active Directory domain.')
 resource ldapExtension 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
