@@ -45,6 +45,7 @@ steps:
           overrideParameters:
               | # additional parameters to pass to the ARM template
               -privateCloudName $(privateCloudName) 
+              -resourceGroupName $(resourceGroupName)
               -location $(location) 
               -adminPassword $(secret-adminPassword) 
               -adminUsername $(secret-adminUsername) 
