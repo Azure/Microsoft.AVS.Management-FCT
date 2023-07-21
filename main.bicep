@@ -165,25 +165,25 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
 // }
 
 
-@description('Creates an extension for the LDAP VM to join an Active Directory domain.')
-resource ldapExtension 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
-  name: ldapExtensionName
-  location: location
-  properties: {
-    publisher: 'Microsoft.Compute'
-    type: 'JsonADDomainExtension'
-    typeHandlerVersion: '1.3'
-    autoUpgradeMinorVersion: true
-    settings: {
-      Name: domainName
-      User: domainAdminUsername
-      Password: domainAdminPassword
-      Restart: 'true'
-      OUPath: 'OU=AVS,DC=mydomain,DC=com' // example OU path
-    }
-    protectedSettings: {
-      // commandToExecute: 'powershell.exe Install-ADDSForest -DomainName ${domainName} -DomainNetbiosName ${domainName} -SafeModeAdministratorPassword (ConvertTo-SecureString -AsPlainText "${domainAdminPassword}" -Force) -Force:$true'
-      vmResourceId: vm.id
-    }
-  }
-}
+// @description('Creates an extension for the LDAP VM to join an Active Directory domain.')
+// resource ldapExtension 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
+//   name: ldapExtensionName
+//   location: location
+//   properties: {
+//     publisher: 'Microsoft.Compute'
+//     type: 'JsonADDomainExtension'
+//     typeHandlerVersion: '1.3'
+//     autoUpgradeMinorVersion: true
+//     settings: {
+//       Name: domainName
+//       User: domainAdminUsername
+//       Restart: 'true'
+//       OUPath: 'OU=AVS,DC=mydomain,DC=com' // example OU path
+//     }
+//     protectedSettings: {
+//       Password: domainAdminPassword
+//       // commandToExecute: 'powershell.exe Install-ADDSForest -DomainName ${domainName} -DomainNetbiosName ${domainName} -SafeModeAdministratorPassword (ConvertTo-SecureString -AsPlainText "${domainAdminPassword}" -Force) -Force:$true'
+//       vmResourceId: vm.id
+//     }
+//   }
+// }
