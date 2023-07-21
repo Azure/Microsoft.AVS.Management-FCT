@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "13299705427461871245"
+      "templateHash": "3013624899142747344"
     }
   },
   "parameters": {
@@ -33,9 +33,99 @@
     "tag": {
       "type": "string",
       "defaultValue": "TEST"
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-VNET', parameters('privateCloudName'))]"
+    },
+    "nicName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-NIC', parameters('privateCloudName'))]"
+    },
+    "ldapExtensionName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-LDAP', parameters('privateCloudName'))]"
+    },
+    "vnetCloudPeeringName": {
+      "type": "string",
+      "defaultValue": "VNETtoCLOUD-PEERING"
+    },
+    "cloudVnetPeeringName": {
+      "type": "string",
+      "defaultValue": "CLOUDtoVNET-PEERING"
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "[format('{0}-VM', parameters('privateCloudName'))]"
     }
   },
   "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-02-01",
+      "name": "[parameters('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/22"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "ldap-subnet",
+            "properties": {
+              "addressPrefix": "10.0.0.0/22"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "description": "Creates a virtual network with a single subnet for LDAP."
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2023-02-01",
+      "name": "[parameters('vnetCloudPeeringName')]",
+      "properties": {
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
+        },
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": true,
+        "useRemoteGateways": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "metadata": {
+        "description": "Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP."
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2023-02-01",
+      "name": "[parameters('cloudVnetPeeringName')]",
+      "properties": {
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+        },
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": true,
+        "useRemoteGateways": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "metadata": {
+        "description": "Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP."
+      }
+    },
     {
       "type": "Microsoft.AVS/privateClouds",
       "apiVersion": "2022-05-01",
@@ -59,6 +149,104 @@
       },
       "metadata": {
         "description": "Creates an AVS private cloud."
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-02-01",
+      "name": "[parameters('nicName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAddress": "10.0.0.10",
+              "privateIPAllocationMethod": "Static",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+      ],
+      "metadata": {
+        "description": "Creates a network interface for the LDAP VM."
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2022-11-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_A1_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[format('{0}-osdisk', parameters('vmName'))]",
+            "createOption": "FromImage"
+          }
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('nicName'))]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', parameters('nicName'))]"
+      ],
+      "metadata": {
+        "description": "Creates a VM for LDAP."
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2022-11-01",
+      "name": "[parameters('ldapExtensionName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "JsonADDomainExtension",
+        "typeHandlerVersion": "1.3",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "Name": "[parameters('domainName')]",
+          "User": "[parameters('domainAdminUsername')]",
+          "Password": "[parameters('domainAdminPassword')]",
+          "Restart": "true",
+          "OUPath": "OU=AVS,DC=mydomain,DC=com"
+        },
+        "protectedSettings": {
+          "vmResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+      ],
+      "metadata": {
+        "description": "Creates an extension for the LDAP VM to join an Active Directory domain."
       }
     }
   ]
