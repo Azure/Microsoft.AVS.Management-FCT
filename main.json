@@ -5,11 +5,14 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "3013624899142747344"
+      "templateHash": "11829355689874780615"
     }
   },
   "parameters": {
     "privateCloudName": {
+      "type": "string"
+    },
+    "resourceGroupName": {
       "type": "string"
     },
     "location": {
@@ -90,7 +93,7 @@
       "name": "[parameters('vnetCloudPeeringName')]",
       "properties": {
         "remoteVirtualNetwork": {
-          "id": "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
+          "id": "[resourceId(parameters('resourceGroupName'), 'Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
         },
         "allowVirtualNetworkAccess": true,
         "allowForwardedTraffic": true,
@@ -98,7 +101,6 @@
         "useRemoteGateways": false
       },
       "dependsOn": [
-        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]",
         "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
       ],
       "metadata": {
@@ -111,7 +113,7 @@
       "name": "[parameters('cloudVnetPeeringName')]",
       "properties": {
         "remoteVirtualNetwork": {
-          "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+          "id": "[resourceId(parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
         },
         "allowVirtualNetworkAccess": true,
         "allowForwardedTraffic": true,
@@ -119,8 +121,7 @@
         "useRemoteGateways": false
       },
       "dependsOn": [
-        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]",
-        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+        "[resourceId('Microsoft.AVS/privateClouds', parameters('privateCloudName'))]"
       ],
       "metadata": {
         "description": "Creates a virtual network peering between the AVS private cloud and the virtual network created for LDAP."

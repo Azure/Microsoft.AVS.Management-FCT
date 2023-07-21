@@ -28,7 +28,7 @@ variables:
     secret-domainAdminUsername: $(domainAdminUsername)
     secret-domainName: $(domainName)
     # Pipeline config variables
-    system.debug: false # Set to 'true' to enable diagnostic tracing
+    system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
 steps:
