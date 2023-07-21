@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "16026427744551887144"
+      "templateHash": "3912074194878549151"
     }
   },
   "parameters": {
@@ -123,7 +123,7 @@
               "privateIPAddress": "10.0.0.10",
               "privateIPAllocationMethod": "Static",
               "subnet": {
-                "id": "[resourceId(parameters('privateCloudName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'VNET', 'SUBNET')]"
               }
             }
           }
