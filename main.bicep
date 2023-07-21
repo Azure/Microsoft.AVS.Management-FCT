@@ -32,7 +32,7 @@ dependencies are met, please define your resources in the following order:
 
 @description('Creates a subnet for LDAP.')
 resource subnet 'Microsoft.Network/virtualNetworks/subnets@2021-02-01' = {
-  name: '${vnetName}/${subnetName}'
+  name: subnetName
   properties: {
     addressPrefix: '10.0.0.0/24'
   }
@@ -86,7 +86,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-02-01' = {
           privateIPAddress: '10.0.0.10' // IP address subnet: 10.0.0.0/22
           privateIPAllocationMethod: 'Static'
           subnet: {
-            id: subnet.id
+            id: resourceId(privateCloudName, 'Microsoft.Network/virtualNetworks/subnets', vnetName, subnetName)
           }
         }
       }
