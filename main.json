@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "9304130308537719600"
+      "templateHash": "10817823298385343488"
     }
   },
   "parameters": {
@@ -21,15 +21,6 @@
     "adminUsername": {
       "type": "string"
     },
-    "domainAdminPassword": {
-      "type": "securestring"
-    },
-    "domainAdminUsername": {
-      "type": "string"
-    },
-    "domainName": {
-      "type": "string"
-    },
     "tag": {
       "type": "string",
       "defaultValue": "TEST"
@@ -42,13 +33,13 @@
       "type": "string",
       "defaultValue": "NIC"
     },
-    "ldapExtensionName": {
-      "type": "string",
-      "defaultValue": "LDAP"
-    },
     "vmName": {
       "type": "string",
       "defaultValue": "VM"
+    },
+    "subnetName": {
+      "type": "string",
+      "defaultValue": "SUBNET"
     }
   },
   "resources": [
@@ -65,7 +56,7 @@
         },
         "subnets": [
           {
-            "name": "ldap-subnet",
+            "name": "[parameters('subnetName')]",
             "properties": {
               "addressPrefix": "10.0.0.0/22"
             }
@@ -114,7 +105,7 @@
               "privateIPAddress": "10.0.0.10",
               "privateIPAllocationMethod": "Static",
               "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+                "id": "[format('{0}/{1}', resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), parameters('subnetName'))]"
               }
             }
           }

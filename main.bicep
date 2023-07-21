@@ -4,19 +4,20 @@ param location string
 @secure()
 param adminPassword string
 param adminUsername string
-@secure()
-param domainAdminPassword string
-param domainAdminUsername string
-param domainName string
+// @secure()
+// param domainAdminPassword string
+// param domainAdminUsername string
+// param domainName string
 
 // Values defined here
 param tag string = 'TEST'
 param vnetName string = 'VNET'
 param nicName string = 'NIC'
-param ldapExtensionName string = 'LDAP'
+// param ldapExtensionName string = 'LDAP'
 // param vnetCloudPeeringName string = 'VNETtoCLOUD-PEERING'
 // param cloudVnetPeeringName string = 'CLOUDtoVNET-PEERING'
 param vmName string = 'VM'
+param subnetName string = 'SUBNET'
 
 /*
 To ensure that your resources are created in the correct order and that 
@@ -41,7 +42,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
     }
     subnets: [
       {
-        name: 'ldap-subnet'
+        name: subnetName
         properties: {
           addressPrefix: '10.0.0.0/22'
         }
@@ -84,7 +85,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-02-01' = {
           privateIPAddress: '10.0.0.10' // IP address subnet: 10.0.0.0/22
           privateIPAllocationMethod: 'Static'
           subnet: {
-            id: vnet.id
+            id: '${vnet.id}/${subnetName}'
           }
         }
       }
