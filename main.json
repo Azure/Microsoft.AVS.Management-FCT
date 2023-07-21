@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "10639310519785961839"
+      "templateHash": "14393309679319731057"
     }
   },
   "parameters": {
@@ -114,15 +114,12 @@
               "privateIPAddress": "10.0.0.10",
               "privateIPAllocationMethod": "Static",
               "subnet": {
-                "id": "[format('{0}/{1}', resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), parameters('subnetName'))]"
+                "id": "[resourceId(parameters('vnetName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('subnetName'))]"
               }
             }
           }
         ]
       },
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-      ],
       "metadata": {
         "description": "Creates a network interface for the LDAP VM."
       }

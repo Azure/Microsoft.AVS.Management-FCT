@@ -85,7 +85,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-02-01' = {
           privateIPAddress: '10.0.0.10' // IP address subnet: 10.0.0.0/22
           privateIPAllocationMethod: 'Static'
           subnet: {
-            id: '${vnet.id}/${subnetName}'
+            id: resourceId(vnetName, 'Microsoft.Network/virtualNetworks/subnets', subnetName)
           }
         }
       }
