@@ -29,6 +29,13 @@ dependencies are met, please define your resources in the following order:
 	5. Virtual network peering 
   6. LDAP extension
 */
+@description('Creates a subnet for LDAP.')
+resource subnet 'Microsoft.Network/virtualNetworks/subnets@2021-02-01' = {
+  name: subnetName
+  properties: {
+    addressPrefix: '10.0.0.0/24'
+  }
+}
 
 @description('Creates a virtual network with a single subnet for LDAP.')
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
@@ -41,12 +48,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       ]
     }
     subnets: [
-      {
-        name: subnetName
-        properties: {
-          addressPrefix: '10.0.0.0/22'
-        }
-      }
+      subnet
     ]
   }
 }
@@ -85,7 +87,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-02-01' = {
           privateIPAddress: '10.0.0.10' // IP address subnet: 10.0.0.0/22
           privateIPAllocationMethod: 'Static'
           subnet: {
-            id: resourceId(vnetName, 'Microsoft.Network/virtualNetworks/subnets', subnetName)
+            id: subnet.id
           }
         }
       }

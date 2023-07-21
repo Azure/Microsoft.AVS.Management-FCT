@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "14393309679319731057"
+      "templateHash": "17223145366199258548"
     }
   },
   "parameters": {
@@ -53,6 +53,17 @@
   },
   "resources": [
     {
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "apiVersion": "2021-02-01",
+      "name": "[parameters('subnetName')]",
+      "properties": {
+        "addressPrefix": "10.0.0.0/24"
+      },
+      "metadata": {
+        "description": "Creates a subnet for LDAP."
+      }
+    },
+    {
       "type": "Microsoft.Network/virtualNetworks",
       "apiVersion": "2023-02-01",
       "name": "[parameters('vnetName')]",
@@ -64,14 +75,12 @@
           ]
         },
         "subnets": [
-          {
-            "name": "[parameters('subnetName')]",
-            "properties": {
-              "addressPrefix": "10.0.0.0/22"
-            }
-          }
+          "[reference(resourceId('Microsoft.Network/virtualNetworks/subnets', split(parameters('subnetName'), '/')[0], split(parameters('subnetName'), '/')[1]), '2021-02-01', 'full')]"
         ]
       },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(parameters('subnetName'), '/')[0], split(parameters('subnetName'), '/')[1])]"
+      ],
       "metadata": {
         "description": "Creates a virtual network with a single subnet for LDAP."
       }
@@ -114,12 +123,15 @@
               "privateIPAddress": "10.0.0.10",
               "privateIPAllocationMethod": "Static",
               "subnet": {
-                "id": "[resourceId(parameters('vnetName'), 'Microsoft.Network/virtualNetworks/subnets', parameters('subnetName'))]"
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(parameters('subnetName'), '/')[0], split(parameters('subnetName'), '/')[1])]"
               }
             }
           }
         ]
       },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', split(parameters('subnetName'), '/')[0], split(parameters('subnetName'), '/')[1])]"
+      ],
       "metadata": {
         "description": "Creates a network interface for the LDAP VM."
       }
