@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "10186858294835403277"
+      "templateHash": "6213787577015521172"
     }
   },
   "parameters": {
@@ -36,27 +36,19 @@
     },
     "vnetName": {
       "type": "string",
-      "defaultValue": "[format('{0}-VNET', parameters('privateCloudName'))]"
+      "defaultValue": "VNET"
     },
     "nicName": {
       "type": "string",
-      "defaultValue": "[format('{0}-NIC', parameters('privateCloudName'))]"
+      "defaultValue": "NIC"
     },
     "ldapExtensionName": {
       "type": "string",
-      "defaultValue": "[format('{0}-LDAP', parameters('privateCloudName'))]"
-    },
-    "vnetCloudPeeringName": {
-      "type": "string",
-      "defaultValue": "VNETtoCLOUD-PEERING"
-    },
-    "cloudVnetPeeringName": {
-      "type": "string",
-      "defaultValue": "CLOUDtoVNET-PEERING"
+      "defaultValue": "LDAP"
     },
     "vmName": {
       "type": "string",
-      "defaultValue": "[format('{0}-VM', parameters('privateCloudName'))]"
+      "defaultValue": "VM"
     }
   },
   "resources": [

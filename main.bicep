@@ -11,12 +11,12 @@ param domainName string
 
 // Values defined here
 param tag string = 'TEST'
-param vnetName string = '${privateCloudName}-VNET'
-param nicName string = '${privateCloudName}-NIC'
-param ldapExtensionName string = '${privateCloudName}-LDAP'
-param vnetCloudPeeringName string = 'VNETtoCLOUD-PEERING'
-param cloudVnetPeeringName string = 'CLOUDtoVNET-PEERING'
-param vmName string = '${privateCloudName}-VM'
+param vnetName string = 'VNET'
+param nicName string = 'NIC'
+param ldapExtensionName string = 'LDAP'
+// param vnetCloudPeeringName string = 'VNETtoCLOUD-PEERING'
+// param cloudVnetPeeringName string = 'CLOUDtoVNET-PEERING'
+param vmName string = 'VM'
 
 /*
 To ensure that your resources are created in the correct order and that 
