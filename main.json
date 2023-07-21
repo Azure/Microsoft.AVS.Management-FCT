@@ -5,20 +5,30 @@
     "_generator": {
       "name": "bicep",
       "version": "0.19.5.34762",
-      "templateHash": "11278420722366386938"
+      "templateHash": "13299705427461871245"
     }
   },
   "parameters": {
-    "name": {
-      "type": "string",
-      "defaultValue": "Microsoft-AVS-Management",
-      "metadata": {
-        "description": "privateCloud resource fields."
-      }
+    "privateCloudName": {
+      "type": "string"
     },
     "location": {
-      "type": "string",
-      "defaultValue": "northcentralus"
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "adminUsername": {
+      "type": "string"
+    },
+    "domainAdminPassword": {
+      "type": "securestring"
+    },
+    "domainAdminUsername": {
+      "type": "string"
+    },
+    "domainName": {
+      "type": "string"
     },
     "tag": {
       "type": "string",
@@ -29,7 +39,7 @@
     {
       "type": "Microsoft.AVS/privateClouds",
       "apiVersion": "2022-05-01",
-      "name": "[parameters('name')]",
+      "name": "[parameters('privateCloudName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "av36"
@@ -46,6 +56,9 @@
       },
       "tags": {
         "ENV": "[parameters('tag')]"
+      },
+      "metadata": {
+        "description": "Creates an AVS private cloud."
       }
     }
   ]
