@@ -19,12 +19,17 @@ This project provides a publicly available functional testing pipeline for the [
 
 Overview of important files in this repository:
 
-| File/folder           | Description                                     |
-|-----------------------|-------------------------------------------------|
-| `Tests/Tests.cs`      | C# file containing the tests to be run.         |
-| `azure-pipelines.yml` | Azure DevOps pipeline definition file.          |
-| `main.bicep`          | Bicep file for deploying an AVS private cloud.  |
-| `main.json`           | JSON file generated from the `main.bicep` file. |
+| File/folder           | Description                                       |
+|-----------------------|---------------------------------------------------|
+| `Tests/Tests.cs`      | C# file containing the functional tests           |
+| `azure-pipelines.yml` | Azure Pipelines definition file                   |
+| `main.bicep`          | Bicep template for deploying an AVS private cloud |
+| `adds_install.ps1`    | ADDS setup and installation script for AD/LDAP    |
+
+You can find functional tests for the following **Run Commands** in this repository:
+*  Get-CloudAdminGroups
+*  New-LDAPIdentitySource (not LDAPS)
+*  RemoveExternalIdentitySources
 
 ## **Setup**
 
@@ -60,6 +65,9 @@ After making sure you have enough quota on your desired subscription, please fol
 2. Push the cloned and modified repository to the new Azure DevOps repository or GitHub repository.
 6. Create a new Azure DevOps pipeline by navigating to Pipelines section in your new DevOps project, and follow the instructions to connect it to your repository.
 7. Select the `azure-pipelines.yml` file as the pipeline configuration file.
+8. Click on `Edit` then click on `Variables`. Add the following variables that are used for setting up the AD/LDAP for New-LDAPIdentitySource run command:
+      * `LDAPusername` (must not contain any special characters or be longer than 20 characters)
+      * `LDAPpassword` (please adhere to the password requirements outlined [here](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/faq))
 
 ### **Connecting the two**
 
@@ -81,15 +89,13 @@ While not necessary, you can run the tests locally to make sure they work before
 
 To do so, you need to set up the following environment variables in your terminal (naming is important):
 * `SUBSCRIPTIONID=$(az account show --query 'id' -o tsv)` - keep in mind that this will set the subscription ID to the one you are currently using, so if you want to use a different subscription, you need to set it manually. Keep the `$()` syntax and do not add parenthesis around the command.
-* `RESOURCEGROUPNAME="<your_resource_group_name>"`
-* `PRIVATECLOUDNAME="<your_private_cloud_name>"`
+* `<NAME>="<VALUE>"` - do this for each variable that is defined the in the Variables class in `Tests.cs`
 
 #### Setting Environment Variables on **_Windows_**:
 
 1. Open PowerShell.
 2. Run the following command for each variable: `[Environment]::SetEnvironmentVariable("<VARIABLE_NAME>", <VALUE>, "User")`, replacing variable names and values with the ones mentioned above.
-3. Verify that the environment variables are set by running this command: 
-      * `Write-Host "SUBSCRIPTIONID: $env:SUBSCRIPTIONID"; Write-Host "RESOURCEGROUPNAME: $env:RESOURCEGROUPNAME"; Write-Host "PRIVATECLOUDNAME: $env:PRIVATECLOUDNAME"`
+3. Verify that the environment variables are set by printing them out.
 
 #### Setting Environment Variables on **_Linux_** or **_macOS_** or **_WSL_**:
 
@@ -98,8 +104,7 @@ To do so, you need to set up the following environment variables in your termina
 3. Add the following line for each variable to the file: `export <VARIABLE_NAME>=<VALUE>`, replacing variable names and values with the ones mentioned above.
 4. Press *Ctrl + S* to save, then *Ctrl + X* to exit nano and save the file. If you encounter any problems with nano, you can use different text editors, such as Vim or Emacs, to do the same.
 5. Type `source ~/.bash_profile` or `source ~/.zshrc` to reload the environment variables (or open a new terminal session).
-6. Verify that the environment variables are set by running this command: 
-      * `echo "SUBSCRIPTIONID: $SUBSCRIPTIONID"; echo "RESOURCEGROUPNAME: $RESOURCEGROUPNAME"; echo "PRIVATECLOUDNAME: $PRIVATECLOUDNAME"`.
+6. Verify that the environment variables are set by printing them out.
 
 To execute the tests:
 
@@ -119,6 +124,12 @@ Execution of the pipeline can be triggered in the following ways:
 
 After executing the pipeline, you should be able to see the results in the `Tests` tab of your pipeline run, with any failed tests highlighted in red. You can also see the results of the pipeline run in the `Runs` tab of your pipeline.
 
+**Notes**: 
+* Initial deployment of the AVS private cloud and other resources can take up to 5-6 hours, therefore the pipeline run can take up to 6 hours to complete. After the initial deployment, the pipeline run should take less than 5 minutes to complete, per successful run.
+* Since the initial deployment is the only one that is needed for AD/LDAP seed scripting, for each run after the initial deployment you can set the `isFirstRun` variable to false in the `azure-pipelines.yml` file. This will skip the initial ADDS setup steps.
+* You can modify the `adds_install.ps1` script to fit your needs. You can add/modify users, groups, etc. 
+* If anything breaks, please retry with `system.debug` turned on. This will increase the logging and will help you understand what went wrong. For quick iterative development, local development is recommended. You can set up another branch in your repository to which you can push your code, so that you can execute the pipeline manually to test your code without merging into main.
+
 ## **Additional Resources**
 
 * [.NET Official Tutorials](https://learn.microsoft.com/en-us/dotnet/core/tutorials/)
@@ -131,6 +142,8 @@ After executing the pipeline, you should be able to see the results in the `Test
 * [NUnit documentation](https://docs.nunit.org/)
 * [NuGet documentation](https://docs.microsoft.com/en-us/nuget/)
 * [Azure .NET SDK documentation](https://docs.microsoft.com/en-us/dotnet/api/overview/azure/?view=azure-dotnet)
+* [Configure external identity source for vCenter Server - Azure VMware Solution | Microsoft Learn](https://learn.microsoft.com/en-us/azure/azure-vmware/configure-identity-source-vcenter)
+* [Azure VMware Solution: A comprehensive guide to LDAPS identity integration](https://cloud.fskelly.com/post/2023/avs-ldaps-configure-part1/)
 
 ## **Trademarks**
 
