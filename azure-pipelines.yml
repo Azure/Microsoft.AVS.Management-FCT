@@ -1,4 +1,4 @@
-# # Midnight scheduled build (uncomment to enable)
+# # Midnight scheduled build (uncomment to enable!)
 # schedules:
 #     - cron: '0 0 * * *'
 #       displayName: Daily midnight build
@@ -14,27 +14,75 @@ trigger:
 pool:
     vmImage: ubuntu-latest
 
-# Define variables to be used throughout the pipeline.
+# Define the variables that will be used in the pipeline. The password and the username must be defined in the pipeline secret variables!
 variables:
-    privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
     resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
+    privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
+    location: northcentralus # Your Azure Region
     subscriptionName: FCT Pipeline # Your Azure Subscription Name
-    system.debug: false # Set to 'true' to enable diagnostic tracing
+    baseDNGroups: CN=Users,DC=contoso,DC=com # Your Base DN Groups
+    baseDNUsers: CN=Users,DC=contoso,DC=com # Your Base DN Users
+    domainName: contoso.com # FQDN of Your Domain
+    domainNetBIOSName: contoso # Your BIOS Domain Name
+    primaryURL: ldap://VM.contoso.com:389 # Your Primary URL
+    isFirstRun: false # Set to 'true' to install ADDS
+    system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
 steps:
-    # Deploy an ARM template to the specified resource group.
-    - task: AzureResourceGroupDeployment@2
-      displayName: Deploy ARM template to Resource Group
+    - task: AzureCLI@2
+      displayName: ARM Deployment
       inputs:
           azureSubscription: $(subscriptionName)
-          action: Create Or Update Resource Group
-          resourceGroupName: $(resourceGroupName)
-          templateLocation: Linked artifact # the ARM template is stored in this repository
-          csmFile: main.json # the ARM template file name that was created from outputting the ARM template from the Bicep file
-          deploymentMode: Incremental # only deploy resources that have changed
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              az deployment group create \
+                  --resource-group $(resourceGroupName) \
+                  --template-file main.bicep \
+                  --parameters location=$(location) username=$(LDAPusername) password=$(LDAPpassword) domain=$(domainName) private_cloud_name=$(privateCloudName)
 
-    # Use the Azure CLI to set variables that will be used in the project code.
+    # Initial setup - will only run if the isFirstRun variable is set to true
+    - task: AzureCLI@2
+      displayName: Update DNS Service # please do not run this step twice as it will result in error
+      condition: eq(variables.isFirstRun, true)
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              az vmware workload-network dns-service update --resource-group $(resourceGroupName) --private-cloud $(privateCloudName) --dns-service dns-forwarder --fqdn-zones $(domainName)
+    - task: AzureCLI@2
+      displayName: Install ADDS
+      condition: eq(variables.isFirstRun, true)
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              sleep 60s
+              az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts @adds_install.ps1 --parameters "DomainName=$(domainName)" "DomainNetBIOSName=$(domainNetBIOSName)" "Username=$(LDAPusername)" "Password=$(LDAPpassword)" --verbose
+    - task: AzureCLI@2
+      displayName: Restart VM
+      condition: eq(variables.isFirstRun, true)
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts "Restart-Computer -Force" --verbose
+    - task: AzureCLI@2
+      displayName: Configure ADDS
+      condition: eq(variables.isFirstRun, true)
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              sleep 60s
+              az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts @adds_install.ps1 --parameters "DomainName=$(domainName)" "DomainNetBIOSName=$(domainNetBIOSName)" "Username=$(LDAPusername)" "Password=$(LDAPpassword)" --verbose
+
+    # Use the Azure CLI to set variables that will be used in the C# code.
     - task: AzureCLI@2
       displayName: Set Variables
       inputs:
@@ -44,6 +92,14 @@ steps:
           inlineScript: |
               subscriptionId=$(az account show --query 'id' -o tsv)
               echo "##vso[task.setvariable variable=SUBSCRIPTIONID]$subscriptionId"
+              echo "##vso[task.setvariable variable=PRIVATECLOUDNAME]$(privateCloudName)"
+              echo "##vso[task.setvariable variable=BASEDNGROUPS]$(baseDNGroups)"
+              echo "##vso[task.setvariable variable=BASEDNUSERS]$(baseDNUsers)"
+              echo "##vso[task.setvariable variable=PRIMARYURL]$(primaryURL)"
+              echo "##vso[task.setvariable variable=DOMAINNETBIOSNAME]$(domainNetBIOSName)"
+              echo "##vso[task.setvariable variable=DOMAINNAME]$(domainName)"
+              echo "##vso[task.setvariable variable=USERNAME]$(LDAPusername)"
+              echo "##vso[task.setvariable variable=PASSWORD]$(LDAPpassword)"
 
     - task: AzureCLI@2
       displayName: Run Tests
