@@ -19,7 +19,7 @@ variables:
     resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
     privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
     location: northcentralus # Your Azure Region
-    subscriptionName: FCT Pipeline # Your Azure Subscription Name
+    subscriptionName: OSS Testing # Your Azure Subscription Name
     baseDNGroups: CN=Users,DC=contoso,DC=com # Your Base DN Groups
     baseDNUsers: CN=Users,DC=contoso,DC=com # Your Base DN Users
     domainName: contoso.com # FQDN of Your Domain
