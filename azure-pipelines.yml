@@ -18,7 +18,7 @@ pool:
 variables:
     resourceGroupName: AVS-Management-FCT # Your Resource Group Name
     privateCloudName: AVS-Management-FCT # Your Private Cloud Name
-    location: northcentralus # Your Azure Region
+    location: canadacentral # Your Azure Region
     subscriptionName: OSS Testing # Your Azure Subscription Name
     baseDNGroups: CN=Users,DC=contoso,DC=com # Your Base DN Groups
     baseDNUsers: CN=Users,DC=contoso,DC=com # Your Base DN Users
