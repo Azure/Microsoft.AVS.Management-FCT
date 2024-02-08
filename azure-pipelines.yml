@@ -16,8 +16,8 @@ pool:
 
 # Define the variables that will be used in the pipeline. The password and the username must be defined in the pipeline secret variables!
 variables:
-    resourceGroupName: Microsoft-AVS-Management # Your Resource Group Name
-    privateCloudName: Microsoft-AVS-Management # Your Private Cloud Name
+    resourceGroupName: AVS-Management-FCT # Your Resource Group Name
+    privateCloudName: AVS-Management-FCT # Your Private Cloud Name
     location: northcentralus # Your Azure Region
     subscriptionName: OSS Testing # Your Azure Subscription Name
     baseDNGroups: CN=Users,DC=contoso,DC=com # Your Base DN Groups
