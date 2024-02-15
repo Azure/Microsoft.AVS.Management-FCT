@@ -11,7 +11,7 @@ resource private_cloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
   name: private_cloud_name
   location: location
   sku: {
-    name: 'av36'
+    name: 'av36p'
   }
   properties: {
     availability: {
