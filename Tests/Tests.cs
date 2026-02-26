@@ -90,7 +90,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string majorPackageVersion = "9";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "Get-CloudAdminGroups";
@@ -126,7 +126,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string majorPackageVersion = "9";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "New-LDAPIdentitySource";
@@ -178,7 +178,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string majorPackageVersion = "9";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "Remove-ExternalIdentitySources";

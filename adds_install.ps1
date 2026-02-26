@@ -52,7 +52,7 @@ function Install-ADDS {
     else {
         Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools -Restart:$false -Confirm:$false
         Write-Host "[Install-ADModules] Active Directory module has been installed."
-        Install-ADDSForest -DomainName $DomainName -DomainNetBIOSName $Domain -SafeModeAdministratorPassword (ConvertTo-SecureString -String $Password -AsPlainText -Force) -SkipPreChecks -NoRebootOnCompletion:$true -Force:$true -SkipAutoConfigureDns:$true
+        Install-ADDSForest -DomainName $DomainName -DomainNetBIOSName $DomainNetBIOSName -SafeModeAdministratorPassword (ConvertTo-SecureString -String $Password -AsPlainText -Force) -SkipPreChecks -NoRebootOnCompletion:$true -Force:$true -SkipAutoConfigureDns:$true
         Write-Host "[Install-ADDS] Server has been promoted to domain controller. The server must be restarted before the Active Directory module can be used."
     }
 }

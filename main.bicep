@@ -7,11 +7,11 @@ param private_cloud_name string
 param domain string
 
 @description('Creates an AVS private cloud and a DNS FQDN zone.')
-resource private_cloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
+resource private_cloud 'Microsoft.AVS/privateClouds@2023-09-01' = {
   name: private_cloud_name
   location: location
   sku: {
-    name: 'av36'
+    name: 'av36p'
   }
   properties: {
     availability: {
@@ -27,10 +27,10 @@ resource private_cloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
     ENV: 'TEST'
   }
 
-  resource private_cloud_networking 'workloadNetworks@2022-05-01' existing = {
+  resource private_cloud_networking 'workloadNetworks@2023-09-01' existing = {
     name: 'default' // please keep this named 'default' 
 
-    resource dns_zone 'dnsZones@2022-05-01' = {
+    resource dns_zone 'dnsZones@2023-09-01' = {
       name: domain
       properties: {
         displayName: domain
@@ -43,7 +43,7 @@ resource private_cloud 'Microsoft.AVS/privateClouds@2022-05-01' = {
 }}
 
 @description('Creates an ExpressRoute resource for the private cloud.')
-resource expressroute 'Microsoft.AVS/privateClouds/authorizations@2022-05-01' = {
+resource expressroute 'Microsoft.AVS/privateClouds/authorizations@2023-09-01' = {
   parent: private_cloud
   name: 'er-auth-key'
   properties: {} // please do not remove this field
@@ -155,15 +155,15 @@ resource expressroute_connection 'Microsoft.Network/connections@2023-04-01' = {
   }
 }
   
-resource gateway_pip 'Microsoft.Network/publicIPAddresses@2020-08-01' = {
+resource gateway_pip 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   name: 'Gateway_Public_IP'
   location: location
   sku: {
-    name: 'Basic'
+    name: 'Standard'
     tier: 'Regional'
   }
   properties: {
-    publicIPAllocationMethod: 'Dynamic'
+    publicIPAllocationMethod: 'Static'
   }
 }
 
