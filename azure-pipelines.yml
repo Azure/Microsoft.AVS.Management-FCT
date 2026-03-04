@@ -25,8 +25,8 @@ variables:
     domainName: contoso.com # FQDN of Your Domain
     domainNetBIOSName: contoso # Your BIOS Domain Name
     primaryURL: ldap://VM.contoso.com:389 # Your Primary URL
-    isFirstRun: false # Set to 'false' after initial deployment
-    system.debug: false # Set to 'true' to enable diagnostic tracing
+    isFirstRun: false # Set to 'true' to install ADDS
+    system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
 steps:
