@@ -89,8 +89,8 @@ namespace Tests
         public async Task ScriptExecution_CRUD()
         {
             // set up the cmdlet and cmldet resource
-            string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "Get-CloudAdminGroups";
@@ -125,8 +125,8 @@ namespace Tests
         public async Task ScriptExecution_NewLDAPIdentitySource()
         {
             // set up the cmdlet and cmldet resource
-            string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "New-LDAPIdentitySource";
@@ -177,8 +177,8 @@ namespace Tests
         public async Task ScriptExecution_RemoveExternalIdentitySources()
         {
             // set up the cmdlet and cmldet resource
-            string packageName = "Microsoft.AVS.Management";
-            string majorPackageVersion = "5";
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
             string packageVersion = $"{majorPackageVersion}.*";
             string armPackageName = $"{packageName}@{packageVersion}";
             string cmdletName = "Remove-ExternalIdentitySources";
