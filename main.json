@@ -1,0 +1,267 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "15808928042596063170"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "username": {
+      "type": "string"
+    },
+    "password": {
+      "type": "securestring"
+    },
+    "private_cloud_name": {
+      "type": "string"
+    },
+    "domain": {
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.AVS/privateClouds/workloadNetworks/dnsZones",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}/{2}', parameters('private_cloud_name'), 'default', parameters('domain'))]",
+      "properties": {
+        "displayName": "[parameters('domain')]",
+        "dnsServerIps": [
+          "172.36.0.4"
+        ],
+        "domain": [
+          "[parameters('domain')]"
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.AVS/privateClouds', parameters('private_cloud_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.AVS/privateClouds",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('private_cloud_name')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "av36p"
+      },
+      "properties": {
+        "availability": {
+          "strategy": "singleZone"
+        },
+        "internet": "Enabled",
+        "managementCluster": {
+          "clusterSize": 3
+        },
+        "networkBlock": "10.0.0.0/22"
+      },
+      "tags": {
+        "ENV": "TEST"
+      },
+      "metadata": {
+        "description": "Creates an AVS private cloud and a DNS FQDN zone."
+      }
+    },
+    {
+      "type": "Microsoft.AVS/privateClouds/authorizations",
+      "apiVersion": "2023-09-01",
+      "name": "[format('{0}/{1}', parameters('private_cloud_name'), 'er-auth-key')]",
+      "properties": {},
+      "dependsOn": [
+        "[resourceId('Microsoft.AVS/privateClouds', parameters('private_cloud_name'))]"
+      ],
+      "metadata": {
+        "description": "Creates an ExpressRoute resource for the private cloud."
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-04-01",
+      "name": "Network_Interface",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAddress": "172.36.0.4",
+              "privateIPAllocationMethod": "Static",
+              "primary": true,
+              "subnet": {
+                "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', 'VNet'), '2023-04-01').subnets[1].id]"
+              }
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'VNet')]"
+      ],
+      "metadata": {
+        "description": "Creates a NIC for the VNet."
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-03-01",
+      "name": "VM",
+      "location": "[parameters('location')]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_B2als_v2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2022-datacenter-azure-edition-hotpatch",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "Domain_Controller_OsDisk",
+            "createOption": "FromImage"
+          }
+        },
+        "osProfile": {
+          "adminUsername": "[parameters('username')]",
+          "adminPassword": "[parameters('password')]",
+          "computerName": "VM"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'Network_Interface')]"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', 'Network_Interface')]"
+      ],
+      "metadata": {
+        "description": "Creates a VM that acts as a domain controller with AD DS."
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-04-01",
+      "name": "VNet",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "172.36.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "172.36.1.0/24"
+            }
+          },
+          {
+            "name": "Default",
+            "properties": {
+              "addressPrefix": "172.36.0.0/24"
+            }
+          }
+        ]
+      },
+      "metadata": {
+        "description": "Creates a VNet that connects the VM and the private cloud."
+      }
+    },
+    {
+      "type": "Microsoft.Network/connections",
+      "apiVersion": "2023-04-01",
+      "name": "ExpressRoute_Connection",
+      "location": "[parameters('location')]",
+      "properties": {
+        "connectionType": "ExpressRoute",
+        "virtualNetworkGateway1": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', 'VNet_Gateway')]",
+          "properties": {}
+        },
+        "useLocalAzureIpAddress": false,
+        "enableBgp": false,
+        "connectionProtocol": "IKEv1",
+        "authorizationKey": "[reference(resourceId('Microsoft.AVS/privateClouds/authorizations', parameters('private_cloud_name'), 'er-auth-key'), '2023-09-01').expressRouteAuthorizationKey]",
+        "routingWeight": 0,
+        "expressRouteGatewayBypass": false,
+        "peer": {
+          "id": "[reference(resourceId('Microsoft.AVS/privateClouds/authorizations', parameters('private_cloud_name'), 'er-auth-key'), '2023-09-01').expressRouteId]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.AVS/privateClouds/authorizations', parameters('private_cloud_name'), 'er-auth-key')]",
+        "[resourceId('Microsoft.Network/virtualNetworkGateways', 'VNet_Gateway')]"
+      ],
+      "metadata": {
+        "description": "Creates an ExpressRoute connection between the VNet and private cloud."
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-04-01",
+      "name": "Gateway_Public_IP",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworkGateways",
+      "apiVersion": "2023-04-01",
+      "name": "VNet_Gateway",
+      "location": "[parameters('location')]",
+      "properties": {
+        "enablePrivateIpAddress": false,
+        "ipConfigurations": [
+          {
+            "name": "default",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'Gateway_Public_IP')]"
+              },
+              "subnet": {
+                "id": "[reference(resourceId('Microsoft.Network/virtualNetworks', 'VNet'), '2023-04-01').subnets[0].id]"
+              }
+            }
+          }
+        ],
+        "gatewayType": "ExpressRoute",
+        "vpnType": "PolicyBased",
+        "enableBgp": false,
+        "activeActive": false,
+        "vpnGatewayGeneration": "None",
+        "allowRemoteVnetTraffic": false,
+        "allowVirtualWanTraffic": false,
+        "adminState": "Enabled",
+        "sku": {
+          "name": "UltraPerformance",
+          "tier": "UltraPerformance"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', 'Gateway_Public_IP')]",
+        "[resourceId('Microsoft.Network/virtualNetworks', 'VNet')]"
+      ],
+      "metadata": {
+        "description": "Creates a VNet gateway."
+      }
+    }
+  ]
+}
