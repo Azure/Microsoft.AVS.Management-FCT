@@ -27,6 +27,8 @@ namespace Tests
         protected static readonly string? LDAPPrimaryUrl = Environment.GetEnvironmentVariable("PRIMARYURL");
         protected static readonly string? LDAPDomainNetBIOSName = Environment.GetEnvironmentVariable("DOMAINNETBIOSNAME");
         protected static readonly string? LDAPDomainName = Environment.GetEnvironmentVariable("DOMAINNAME");
+        protected static readonly string? LDAPSPrimaryUrl = Environment.GetEnvironmentVariable("LDAPSPRIMARYURL");
+        protected static readonly string? SSLCertificatesSAS = Environment.GetEnvironmentVariable("SSLCERTIFICATESSAS");
         protected static readonly DefaultAzureCredential AzureCredential = new();
     }
 
@@ -56,6 +58,8 @@ namespace Tests
                     Assert.That(LDAPPrimaryUrl, Is.Not.Null, "LDAPPrimaryUrl is null.");
                     Assert.That(LDAPDomainNetBIOSName, Is.Not.Null, "LDAPDomainNetBIOSName is null.");
                     Assert.That(LDAPDomainName, Is.Not.Null, "LDAPDomainName is null.");
+                    Assert.That(LDAPSPrimaryUrl, Is.Not.Null, "LDAPSPrimaryUrl is null.");
+                    Assert.That(SSLCertificatesSAS, Is.Not.Null, "SSLCertificatesSAS is null.");
                     Assert.That(AzureCredential, Is.Not.Null, "Credentials is null.");
                 });
 
@@ -171,12 +175,103 @@ namespace Tests
         }
 
         /// <summary>
-        /// Async method that tests the script execution of Remove-ExternalIdentitySources.
+        /// Async method that tests the script execution of Remove-ExternalIdentitySources (after LDAP).
         /// </summary>
         [Test, Order(2)]
         public async Task ScriptExecution_RemoveExternalIdentitySources()
         {
             // set up the cmdlet and cmldet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "Remove-ExternalIdentitySources";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(2)) // script execution will timeout after X minute(s) if it does not complete
+            };
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+            var executionResponse = executionResource.Data;
+
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of New-LDAPSIdentitySource. Uses LDAPS (SSL) with certificate.
+        /// This test must be run after the LDAP identity source is removed and before the LDAPS remove test.
+        /// </summary>
+        [Test, Order(3)]
+        public async Task ScriptExecution_NewLDAPSIdentitySource()
+        {
+            // set up the cmdlet and cmdlet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "New-LDAPSIdentitySource";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(5)) // LDAPS may take longer due to certificate validation
+            };
+
+            // set up the execution parameters (same as LDAP but with LDAPS URL and SSL certificate)
+            ScriptExecutionParameterDetails[] parameters = new ScriptExecutionParameterDetails[]
+            {
+                new PSCredentialExecutionParameterDetails("Credential") { Username = $"{LDAPUsername}@{LDAPDomainName}", Password = LDAPPassword },
+                new ScriptStringExecutionParameterDetails("BaseDNGroups") { Value = LDAPBaseDNGroups },
+                new ScriptStringExecutionParameterDetails("BaseDNUsers") { Value = LDAPBaseDNUsers },
+                new ScriptStringExecutionParameterDetails("PrimaryUrl") { Value = LDAPSPrimaryUrl },
+                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainName },
+                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainNetBIOSName },
+                new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPSIdentitySource" },
+                new ScriptStringExecutionParameterDetails("SSLCertificatesSAS") { Value = SSLCertificatesSAS },
+            };
+
+            // add the parameters to the execution data
+            foreach (var p in parameters) executionData.Parameters.Add(p);
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+            var executionResponse = executionResource.Data;
+
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of Remove-ExternalIdentitySources (after LDAPS).
+        /// </summary>
+        [Test, Order(4)]
+        public async Task ScriptExecution_RemoveExternalIdentitySources_LDAPS()
+        {
+            // set up the cmdlet and cmdlet resource
             string packageName = "Microsoft.AVS.Identity";
             string majorPackageVersion = "1";
             string packageVersion = $"{majorPackageVersion}.*";

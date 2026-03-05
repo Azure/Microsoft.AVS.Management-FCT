@@ -19,16 +19,18 @@ This project provides a publicly available functional testing pipeline for the [
 
 Overview of important files in this repository:
 
-| File/folder           | Description                                       |
-|-----------------------|---------------------------------------------------|
-| `Tests/Tests.cs`      | C# file containing the functional tests           |
-| `azure-pipelines.yml` | Azure Pipelines definition file                   |
-| `main.bicep`          | Bicep template for deploying an AVS private cloud |
-| `adds_install.ps1`    | ADDS setup and installation script for AD/LDAP    |
+| File/folder           | Description                                                |
+|-----------------------|------------------------------------------------------------|
+| `Tests/Tests.cs`      | C# file containing the functional tests                    |
+| `azure-pipelines.yml` | Azure Pipelines definition file                            |
+| `main.bicep`          | Bicep template for deploying an AVS private cloud          |
+| `adds_install.ps1`    | ADDS setup and installation script for AD/LDAP             |
+| `adcs_install.ps1`    | AD CS setup script for LDAPS (Enterprise Root CA + DNS)    |
 
 You can find functional tests for the following **Run Commands** in this repository:
 *  Get-CloudAdminGroups
-*  New-LDAPIdentitySource (not LDAPS)
+*  New-LDAPIdentitySource (LDAP)
+*  New-LDAPSIdentitySource (LDAPS with SSL certificate)
 *  RemoveExternalIdentitySources
 
 ## **Setup**
@@ -69,6 +71,16 @@ After making sure you have enough quota on your desired subscription, please fol
       * `LDAPusername` (must not contain any special characters or be longer than 20 characters)
       * `LDAPpassword` (please adhere to the password requirements outlined [here](https://learn.microsoft.com/en-us/azure/virtual-machines/windows/faq))
 
+### **LDAPS Configuration**
+
+The pipeline supports testing LDAPS (LDAP over SSL) via the `New-LDAPSIdentitySource` run command. This requires:
+
+1. **AD Certificate Services** — On initial deployment (`isFirstRun: true`), the pipeline installs AD CS as an Enterprise Root CA on the domain controller VM. This issues a DC certificate enabling LDAPS on port 636.
+2. **DNS forwarder** — The pipeline configures the DC as its own DNS server and registers DNS records so the AVS private cloud can resolve the DC's FQDN (required for SSL certificate validation).
+3. **Certificate storage** — A storage account is deployed via `main.bicep` to host the exported root CA certificate. A SAS URL is generated on each pipeline run and passed to the `New-LDAPSIdentitySource` run command.
+
+All LDAPS infrastructure is configured automatically during the first run. No additional manual setup is required beyond the initial pipeline variables.
+
 ### **Connecting the two**
 
 1. Connect your Azure DevOps project to your Azure subscription.
@@ -90,6 +102,7 @@ While not necessary, you can run the tests locally to make sure they work before
 To do so, you need to set up the following environment variables in your terminal (naming is important):
 * `SUBSCRIPTIONID=$(az account show --query 'id' -o tsv)` - keep in mind that this will set the subscription ID to the one you are currently using, so if you want to use a different subscription, you need to set it manually. Keep the `$()` syntax and do not add parenthesis around the command.
 * `<NAME>="<VALUE>"` - do this for each variable that is defined the in the Variables class in `Tests.cs`
+* For LDAPS testing, also set: `LDAPSPRIMARYURL="ldaps://VM.contoso.com:636"` and `SSLCERTIFICATESSAS="<SAS URL to your CA certificate blob>"`
 
 #### Setting Environment Variables on **_Windows_**:
 
@@ -126,8 +139,9 @@ After executing the pipeline, you should be able to see the results in the `Test
 
 **Notes**: 
 * Initial deployment of the AVS private cloud and other resources can take up to 5-6 hours, therefore the pipeline run can take up to 6 hours to complete. After the initial deployment, the pipeline run should take less than 5 minutes to complete, per successful run.
-* Since the initial deployment is the only one that is needed for AD/LDAP seed scripting, for each run after the initial deployment you can set the `isFirstRun` variable to false in the `azure-pipelines.yml` file. This will skip the initial ADDS setup steps.
+* Since the initial deployment is the only one that is needed for AD/LDAP seed scripting, for each run after the initial deployment you can set the `isFirstRun` variable to false in the `azure-pipelines.yml` file. This will skip the initial ADDS and AD CS setup steps.
 * You can modify the `adds_install.ps1` script to fit your needs. You can add/modify users, groups, etc. 
+* The LDAPS test requires a working DNS forwarder and certificate chain. The `adcs_install.ps1` script configures DNS and AD CS automatically during the first run.
 * If anything breaks, please retry with `system.debug` turned on. This will increase the logging and will help you understand what went wrong. For quick iterative development, local development is recommended. You can set up another branch in your repository to which you can push your code, so that you can execute the pipeline manually to test your code without merging into main.
 
 ## **Additional Resources**
@@ -147,5 +161,4 @@ After executing the pipeline, you should be able to see the results in the `Test
 
 ## **Trademarks**
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft’s Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos is subject to those third-party’s policies.
-
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow Microsoft's Trademark & Brand Guidelines. Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos is subject to those third-party's policies.

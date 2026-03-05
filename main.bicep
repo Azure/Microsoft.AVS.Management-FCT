@@ -154,7 +154,31 @@ resource expressroute_connection 'Microsoft.Network/connections@2023-04-01' = {
     }
   }
 }
-  
+
+@description('Creates a storage account for LDAPS certificate storage.')
+var storageAccountName = 'fctcerts${uniqueString(resourceGroup().id)}'
+resource storage_account 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageAccountName
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    allowBlobPublicAccess: false
+  }
+}
+
+resource blob_service 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
+  parent: storage_account
+  name: 'default'
+}
+
+resource cert_container 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blob_service
+  name: 'certificates'
+}
+
 resource gateway_pip 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   name: 'Gateway_Public_IP'
   location: location
@@ -201,3 +225,5 @@ resource vnet_gateway 'Microsoft.Network/virtualNetworkGateways@2023-04-01' = {
     }
   }
 }
+
+output storageAccountName string = storage_account.name
