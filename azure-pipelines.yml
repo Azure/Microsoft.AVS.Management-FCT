@@ -27,7 +27,6 @@ variables:
     primaryURL: ldap://VM.contoso.com:389 # Your Primary URL
     secondaryURL: ldaps://VM.contoso.com:636 # Your Secondary (LDAPS) URL
     isFirstRun: false # Set to 'true' to install ADDS
-    isFirstRunLDAPS: true # Set to 'true' to install LDAPS certificate
     system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
@@ -91,7 +90,7 @@ steps:
               az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts @adds_install.ps1 --parameters "DomainName=$(domainName)" "DomainNetBIOSName=$(domainNetBIOSName)" "Username=$(LDAPusername)" "Password=$(LDAPpassword)" --verbose
     - task: AzureCLI@2
       displayName: Setup LDAPS Certificate
-      condition: eq(variables.isFirstRunLDAPS, true)
+      condition: eq(variables.isFirstRun, true)
       inputs:
           azureSubscription: $(subscriptionName)
           scriptType: bash
