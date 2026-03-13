@@ -25,7 +25,9 @@ variables:
     domainName: contoso.com # FQDN of Your Domain
     domainNetBIOSName: contoso # Your BIOS Domain Name
     primaryURL: ldap://VM.contoso.com:389 # Your Primary URL
+    secondaryURL: ldaps://VM.contoso.com:636 # Your Secondary (LDAPS) URL
     isFirstRun: false # Set to 'true' to install ADDS
+    isFirstRunLDAPS: true # Set to 'true' to install LDAPS certificate
     system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
@@ -87,6 +89,54 @@ steps:
           inlineScript: |
               sleep 60s
               az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts @adds_install.ps1 --parameters "DomainName=$(domainName)" "DomainNetBIOSName=$(domainNetBIOSName)" "Username=$(LDAPusername)" "Password=$(LDAPpassword)" --verbose
+    - task: AzureCLI@2
+      displayName: Setup LDAPS Certificate
+      condition: eq(variables.isFirstRunLDAPS, true)
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript --scripts @ldaps_setup.ps1 --parameters "DomainName=$(domainName)" --verbose
+
+    # Upload LDAPS certificate to blob storage and generate SAS URL
+    - task: AzureCLI@2
+      displayName: Upload LDAPS Certificate
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              storageAccountName=$(az storage account list -g $(resourceGroupName) --query "[0].name" -o tsv)
+
+              az vm run-command invoke -g $(resourceGroupName) -n VM --command-id RunPowerShellScript \
+                  --scripts "Get-Content -Path C:\ldaps_cert.cer -Raw" \
+                  --query "value[0].message" -o tsv > cert_output.txt
+
+              grep -v "Enable succeeded" cert_output.txt | sed '/^\[stdout\]/d; /^\[stderr\]/d; /^$/d' > ldaps_cert.cer
+
+              az storage blob upload \
+                  --account-name "$storageAccountName" \
+                  --container-name certificates \
+                  --name ldaps_cert.cer \
+                  --file ldaps_cert.cer \
+                  --auth-mode login \
+                  --overwrite
+
+              expiry=$(date -u -d "+1 hour" '+%Y-%m-%dT%H:%MZ')
+              accountKey=$(az storage account keys list --account-name "$storageAccountName" -g $(resourceGroupName) --query "[0].value" -o tsv)
+
+              sasUrl=$(az storage blob generate-sas \
+                  --account-name "$storageAccountName" \
+                  --account-key "$accountKey" \
+                  --container-name certificates \
+                  --name ldaps_cert.cer \
+                  --permissions r \
+                  --expiry "$expiry" \
+                  --full-uri \
+                  -o tsv)
+
+              echo "##vso[task.setvariable variable=SSLCERTIFICATESAS]$sasUrl"
 
     # Use the Azure CLI to set variables that will be used in the C# code.
     - task: AzureCLI@2
@@ -103,6 +153,7 @@ steps:
               echo "##vso[task.setvariable variable=BASEDNGROUPS]$(baseDNGroups)"
               echo "##vso[task.setvariable variable=BASEDNUSERS]$(baseDNUsers)"
               echo "##vso[task.setvariable variable=PRIMARYURL]$(primaryURL)"
+              echo "##vso[task.setvariable variable=SECONDARYURL]$(secondaryURL)"
               echo "##vso[task.setvariable variable=DOMAINNETBIOSNAME]$(domainNetBIOSName)"
               echo "##vso[task.setvariable variable=DOMAINNAME]$(domainName)"
               echo "##vso[task.setvariable variable=USERNAME]$(LDAPusername)"

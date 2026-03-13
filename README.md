@@ -25,10 +25,12 @@ Overview of important files in this repository:
 | `azure-pipelines.yml` | Azure Pipelines definition file                   |
 | `main.bicep`          | Bicep template for deploying an AVS private cloud |
 | `adds_install.ps1`    | ADDS setup and installation script for AD/LDAP    |
+| `ldaps_setup.ps1`     | LDAPS certificate setup script for AD/LDAPS       |
 
 You can find functional tests for the following **Run Commands** in this repository:
 *  Get-CloudAdminGroups
 *  New-LDAPIdentitySource (not LDAPS)
+*  New-LDAPSIdentitySource (LDAPS with self-signed certificate)
 *  RemoveExternalIdentitySources
 
 ## **Setup**

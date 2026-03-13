@@ -167,6 +167,27 @@ resource gateway_pip 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   }
 }
 
+@description('Creates a storage account for LDAPS certificate storage.')
+resource storage_account 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: 'fctcerts${uniqueString(resourceGroup().id)}'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    allowBlobPublicAccess: false
+  }
+
+  resource blob_service 'blobServices@2023-01-01' = {
+    name: 'default'
+
+    resource certificates_container 'containers@2023-01-01' = {
+      name: 'certificates'
+    }
+  }
+}
+
 @description('Creates a VNet gateway.')
 resource vnet_gateway 'Microsoft.Network/virtualNetworkGateways@2023-04-01' = {
   name: 'VNet_Gateway'
