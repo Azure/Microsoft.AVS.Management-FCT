@@ -293,9 +293,70 @@ namespace Tests
         }
 
         /// <summary>
-        /// Async method that tests the script execution of Remove-ExternalIdentitySources after LDAPS identity source has been added.
+        /// Async method that tests the script execution of Debug-LDAPSIdentitySources.
+        /// Runs after LDAPS identity source has been added to verify the configuration is healthy.
         /// </summary>
         [Test, Order(4)]
+        public async Task ScriptExecution_DebugLDAPSIdentitySources()
+        {
+            // set up the cmdlet and cmldet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "Debug-LDAPSIdentitySources";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data — 5 minute timeout because Debug-LDAPS uses SSH sessions
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(5)) // script execution will timeout after X minute(s) if it does not complete
+            };
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            ScriptExecutionData executionResponse;
+
+            try
+            {
+                var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+                executionResponse = executionResource.Data;
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                ScriptExecutionResource? failedExecution = null;
+                try
+                {
+                    failedExecution = (await PrivateCloudResource!.GetScriptExecutionAsync(ExecutionNameId)).Value;
+                }
+                catch { /* execution may not exist yet */ }
+
+                string diagnostics = failedExecution != null
+                    ? FormatExecutionDiagnostics(failedExecution.Data)
+                    : "No execution resource available for diagnostics.";
+
+                Assert.Fail($"{cmdletName} ARM operation failed: {ex.Message}\n\nServer-side diagnostics:\n{diagnostics}");
+                return;
+            }
+
+            string output = FormatExecutionDiagnostics(executionResponse);
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded),
+                $"{cmdletName} should always succeed but instead its state is: {executionResponse.ProvisioningState}\n\nExecution output:\n{output}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of Remove-ExternalIdentitySources after LDAPS identity source has been added.
+        /// </summary>
+        [Test, Order(5)]
         public async Task ScriptExecution_RemoveLDAPSExternalIdentitySources()
         {
             // set up the cmdlet and cmldet resource
