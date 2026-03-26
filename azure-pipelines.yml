@@ -155,8 +155,42 @@ steps:
               echo "##vso[task.setvariable variable=SECONDARYURL]$(secondaryURL)"
               echo "##vso[task.setvariable variable=DOMAINNETBIOSNAME]$(domainNetBIOSName)"
               echo "##vso[task.setvariable variable=DOMAINNAME]$(domainName)"
-              echo "##vso[task.setvariable variable=USERNAME]$(LDAPusername)"
-              echo "##vso[task.setvariable variable=PASSWORD]$(LDAPpassword)"
+              echo "##vso[task.setvariable variable=LDAPUSERNAME]$(LDAPusername)"
+              echo "##vso[task.setvariable variable=LDAPPASSWORD]$(LDAPpassword)"
+
+    # Verify private cloud health and SSH availability before running LDAPS tests.
+    # The New-LDAPSIdentitySource cmdlet requires $SSH_Sessions (AVS runtime lazy dictionary)
+    # to push SSL certificates to ESXi hosts. If the private cloud is unhealthy or SSH is
+    # not available, the LDAPS test will fail with "null-valued expression" errors.
+    - task: AzureCLI@2
+      displayName: Verify Private Cloud Health
+      inputs:
+          azureSubscription: $(subscriptionName)
+          scriptType: bash
+          scriptLocation: inlineScript
+          inlineScript: |
+              echo "=== Private Cloud Status ==="
+              az vmware private-cloud show \
+                  --resource-group $(resourceGroupName) \
+                  --name $(privateCloudName) \
+                  --query "{status:provisioningState, internet:properties.internet, endpoints:properties.endpoints}" \
+                  -o json
+
+              echo ""
+              echo "=== Cluster Host Count ==="
+              az vmware cluster list \
+                  --resource-group $(resourceGroupName) \
+                  --private-cloud $(privateCloudName) \
+                  --query "[].{name:name, hosts:properties.hosts, status:properties.provisioningState}" \
+                  -o json
+
+              echo ""
+              echo "=== Script Packages (Identity) ==="
+              az vmware script-package list \
+                  --resource-group $(resourceGroupName) \
+                  --private-cloud $(privateCloudName) \
+                  --query "[?contains(name, 'Identity')].{name:name, version:properties.version, company:properties.company}" \
+                  -o json
 
     - task: AzureCLI@2
       displayName: Run Tests

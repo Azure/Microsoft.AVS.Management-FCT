@@ -158,8 +158,8 @@ namespace Tests
                 new ScriptStringExecutionParameterDetails("BaseDNGroups") { Value = LDAPBaseDNGroups },
                 new ScriptStringExecutionParameterDetails("BaseDNUsers") { Value = LDAPBaseDNUsers },
                 new ScriptStringExecutionParameterDetails("PrimaryUrl") { Value = LDAPPrimaryUrl },
-                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainName },
-                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainNetBIOSName },
+                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainName },
+                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainNetBIOSName },
                 new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPIdentitySource" },
             };
 
@@ -232,12 +232,13 @@ namespace Tests
             ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
             var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
 
-            // set up the execution data
+            // set up the execution data — timeout increased to 5 minutes because LDAPS requires SSH session
+            // initialization (Posh-SSH lazy connect to each ESXi host) on top of the identity source configuration
             var executionData = new ScriptExecutionData
             {
                 ScriptCmdletId = CmdletResourceId,
                 Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
-                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(2)) // script execution will timeout after X minute(s) if it does not complete
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(5)) // script execution will timeout after X minute(s) if it does not complete
             };
 
             // set up the execution parameters
@@ -247,8 +248,8 @@ namespace Tests
                 new ScriptStringExecutionParameterDetails("BaseDNGroups") { Value = LDAPBaseDNGroups },
                 new ScriptStringExecutionParameterDetails("BaseDNUsers") { Value = LDAPBaseDNUsers },
                 new ScriptStringExecutionParameterDetails("PrimaryUrl") { Value = LDAPSecondaryUrl },
-                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainName },
-                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainNetBIOSName },
+                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainName },
+                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainNetBIOSName },
                 new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPSIdentitySource" },
                 new ScriptSecureStringExecutionParameterDetails("SSLCertificatesSasUrl") { SecureValue = SSLCertificatesSAS },
             };
@@ -258,17 +259,34 @@ namespace Tests
 
             // create the script execution, wait for it to complete, and assert a successful response
             ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            ScriptExecutionData executionResponse;
+
             try
             {
                 var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
-                var executionResponse = executionResource.Data;
-
-                Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+                executionResponse = executionResource.Data;
             }
-            catch (Azure.RequestFailedException ex) when (ex.Message.Contains("You cannot call a method on a null-valued expression"))
+            catch (Azure.RequestFailedException ex)
             {
-                Assert.Inconclusive($"{cmdletName} failed due to a known bug in Microsoft.AVS.Identity: SSH_Sessions is not initialized when SSH keys are unavailable. See: Azure-Dedicated-AVS.Management.Internal fix for Test-LDAPSIdentitySourcesConnectivity.");
+                // If the ARM long-running operation itself fails, retrieve the execution to get server-side diagnostics
+                ScriptExecutionResource? failedExecution = null;
+                try
+                {
+                    failedExecution = (await PrivateCloudResource!.GetScriptExecutionAsync(ExecutionNameId)).Value;
+                }
+                catch { /* execution may not exist yet */ }
+
+                string diagnostics = failedExecution != null
+                    ? FormatExecutionDiagnostics(failedExecution.Data)
+                    : "No execution resource available for diagnostics.";
+
+                Assert.Fail($"{cmdletName} ARM operation failed: {ex.Message}\n\nServer-side diagnostics:\n{diagnostics}");
+                return;
             }
+
+            string output = FormatExecutionDiagnostics(executionResponse);
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded),
+                $"{cmdletName} should always succeed but instead its state is: {executionResponse.ProvisioningState}\n\nExecution output:\n{output}");
         }
 
         /// <summary>
@@ -306,6 +324,31 @@ namespace Tests
             var executionResponse = executionResource.Data;
 
             Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+        }
+
+        /// <summary>
+        /// Formats script execution diagnostics (errors, warnings, information, failure reason) into a readable string.
+        /// </summary>
+        private static string FormatExecutionDiagnostics(ScriptExecutionData data)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrEmpty(data.FailureReason))
+                parts.Add($"[FailureReason] {data.FailureReason}");
+
+            if (data.Errors?.Count > 0)
+                parts.Add($"[Errors]\n{string.Join("\n", data.Errors)}");
+
+            if (data.Warnings?.Count > 0)
+                parts.Add($"[Warnings]\n{string.Join("\n", data.Warnings)}");
+
+            if (data.Information?.Count > 0)
+                parts.Add($"[Information]\n{string.Join("\n", data.Information)}");
+
+            if (data.Output?.Count > 0)
+                parts.Add($"[Output]\n{string.Join("\n", data.Output)}");
+
+            return parts.Count > 0 ? string.Join("\n\n", parts) : "No diagnostic output available.";
         }
     }
 }
