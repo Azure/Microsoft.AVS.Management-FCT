@@ -25,6 +25,8 @@ namespace Tests
         protected static readonly string? LDAPBaseDNGroups = Environment.GetEnvironmentVariable("BASEDNGROUPS");
         protected static readonly string? LDAPBaseDNUsers = Environment.GetEnvironmentVariable("BASEDNUSERS");
         protected static readonly string? LDAPPrimaryUrl = Environment.GetEnvironmentVariable("PRIMARYURL");
+        protected static readonly string? LDAPSecondaryUrl = Environment.GetEnvironmentVariable("SECONDARYURL");
+        protected static readonly string? SSLCertificatesSAS = Environment.GetEnvironmentVariable("SSLCERTIFICATESAS");
         protected static readonly string? LDAPDomainNetBIOSName = Environment.GetEnvironmentVariable("DOMAINNETBIOSNAME");
         protected static readonly string? LDAPDomainName = Environment.GetEnvironmentVariable("DOMAINNAME");
         protected static readonly DefaultAzureCredential AzureCredential = new();
@@ -54,6 +56,8 @@ namespace Tests
                     Assert.That(LDAPBaseDNGroups, Is.Not.Null, "LDAPBaseDNGroups is null.");
                     Assert.That(LDAPBaseDNUsers, Is.Not.Null, "LDAPBaseDNUsers is null.");
                     Assert.That(LDAPPrimaryUrl, Is.Not.Null, "LDAPPrimaryUrl is null.");
+                    Assert.That(LDAPSecondaryUrl, Is.Not.Null, "LDAPSecondaryUrl is null.");
+                    Assert.That(SSLCertificatesSAS, Is.Not.Null, "SSLCertificatesSAS is null.");
                     Assert.That(LDAPDomainNetBIOSName, Is.Not.Null, "LDAPDomainNetBIOSName is null.");
                     Assert.That(LDAPDomainName, Is.Not.Null, "LDAPDomainName is null.");
                     Assert.That(AzureCredential, Is.Not.Null, "Credentials is null.");
@@ -154,8 +158,8 @@ namespace Tests
                 new ScriptStringExecutionParameterDetails("BaseDNGroups") { Value = LDAPBaseDNGroups },
                 new ScriptStringExecutionParameterDetails("BaseDNUsers") { Value = LDAPBaseDNUsers },
                 new ScriptStringExecutionParameterDetails("PrimaryUrl") { Value = LDAPPrimaryUrl },
-                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainName },
-                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainNetBIOSName },
+                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainName },
+                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainNetBIOSName },
                 new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPIdentitySource" },
             };
 
@@ -205,6 +209,210 @@ namespace Tests
             var executionResponse = executionResource.Data;
 
             Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of New-LDAPSIdentitySource. This test must be run after the Remove-ExternalIdentitySources test.
+        /// </summary>
+        [Test, Order(3)]
+        public async Task ScriptExecution_NewLDAPSIdentitySource()
+        {
+            // set up the cmdlet and cmldet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "New-LDAPSIdentitySource";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data — timeout increased to 5 minutes because LDAPS requires SSH session
+            // initialization (Posh-SSH lazy connect to each ESXi host) on top of the identity source configuration
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(5)) // script execution will timeout after X minute(s) if it does not complete
+            };
+
+            // set up the execution parameters
+            ScriptExecutionParameterDetails[] parameters = new ScriptExecutionParameterDetails[]
+            {
+                new PSCredentialExecutionParameterDetails("Credential") { Username = $"{LDAPUsername}@{LDAPDomainName}", Password = LDAPPassword },
+                new ScriptStringExecutionParameterDetails("BaseDNGroups") { Value = LDAPBaseDNGroups },
+                new ScriptStringExecutionParameterDetails("BaseDNUsers") { Value = LDAPBaseDNUsers },
+                new ScriptStringExecutionParameterDetails("PrimaryUrl") { Value = LDAPSecondaryUrl },
+                new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainName },
+                new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainNetBIOSName },
+                new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPSIdentitySource" },
+            };
+
+            // SSLCertificatesSasUrl is intentionally omitted — the cmdlet will fetch certs
+            // directly from the domain controllers, which is the more reliable path
+            // (confirmed working via Debug-LDAPSIdentitySources).
+
+            // add the parameters to the execution data
+            foreach (var p in parameters) executionData.Parameters.Add(p);
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            ScriptExecutionData executionResponse;
+
+            try
+            {
+                var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+                executionResponse = executionResource.Data;
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                // If the ARM long-running operation itself fails, retrieve the execution to get server-side diagnostics
+                ScriptExecutionResource? failedExecution = null;
+                try
+                {
+                    failedExecution = (await PrivateCloudResource!.GetScriptExecutionAsync(ExecutionNameId)).Value;
+                }
+                catch { /* execution may not exist yet */ }
+
+                string diagnostics = failedExecution != null
+                    ? FormatExecutionDiagnostics(failedExecution.Data)
+                    : "No execution resource available for diagnostics.";
+
+                Assert.Fail($"{cmdletName} ARM operation failed: {ex.Message}\n\nServer-side diagnostics:\n{diagnostics}");
+                return;
+            }
+
+            string output = FormatExecutionDiagnostics(executionResponse);
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded),
+                $"{cmdletName} should always succeed but instead its state is: {executionResponse.ProvisioningState}\n\nExecution output:\n{output}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of Debug-LDAPSIdentitySources.
+        /// Runs after LDAPS identity source has been added to verify the configuration is healthy.
+        /// </summary>
+        [Test, Order(4)]
+        public async Task ScriptExecution_DebugLDAPSIdentitySources()
+        {
+            // set up the cmdlet and cmldet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "Debug-LDAPSIdentitySources";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data — 5 minute timeout because Debug-LDAPS uses SSH sessions
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(5)) // script execution will timeout after X minute(s) if it does not complete
+            };
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            ScriptExecutionData executionResponse;
+
+            try
+            {
+                var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+                executionResponse = executionResource.Data;
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                ScriptExecutionResource? failedExecution = null;
+                try
+                {
+                    failedExecution = (await PrivateCloudResource!.GetScriptExecutionAsync(ExecutionNameId)).Value;
+                }
+                catch { /* execution may not exist yet */ }
+
+                string diagnostics = failedExecution != null
+                    ? FormatExecutionDiagnostics(failedExecution.Data)
+                    : "No execution resource available for diagnostics.";
+
+                Assert.Fail($"{cmdletName} ARM operation failed: {ex.Message}\n\nServer-side diagnostics:\n{diagnostics}");
+                return;
+            }
+
+            string output = FormatExecutionDiagnostics(executionResponse);
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded),
+                $"{cmdletName} should always succeed but instead its state is: {executionResponse.ProvisioningState}\n\nExecution output:\n{output}");
+        }
+
+        /// <summary>
+        /// Async method that tests the script execution of Remove-ExternalIdentitySources after LDAPS identity source has been added.
+        /// </summary>
+        [Test, Order(5)]
+        public async Task ScriptExecution_RemoveLDAPSExternalIdentitySources()
+        {
+            // set up the cmdlet and cmldet resource
+            string packageName = "Microsoft.AVS.Identity";
+            string majorPackageVersion = "1";
+            string packageVersion = $"{majorPackageVersion}.*";
+            string armPackageName = $"{packageName}@{packageVersion}";
+            string cmdletName = "Remove-ExternalIdentitySources";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            // set up the script execution name
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-execution-{randomNumber}");
+            var executionResourceString = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptExecutions/{ExecutionNameId}";
+
+            // set up the execution data
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)), // script execution will be deleted after X minute(s)
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(2)) // script execution will timeout after X minute(s) if it does not complete
+            };
+
+            // create the script execution, wait for it to complete, and assert a successful response
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+            var executionResponse = executionResource.Data;
+
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded), $"{cmdletName} should always succeed but instead its state is: {executionData.ProvisioningState}");
+        }
+
+        /// <summary>
+        /// Formats script execution diagnostics (errors, warnings, information, failure reason) into a readable string.
+        /// </summary>
+        private static string FormatExecutionDiagnostics(ScriptExecutionData data)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrEmpty(data.FailureReason))
+                parts.Add($"[FailureReason] {data.FailureReason}");
+
+            if (data.Errors?.Count > 0)
+                parts.Add($"[Errors]\n{string.Join("\n", data.Errors)}");
+
+            if (data.Warnings?.Count > 0)
+                parts.Add($"[Warnings]\n{string.Join("\n", data.Warnings)}");
+
+            if (data.Information?.Count > 0)
+                parts.Add($"[Information]\n{string.Join("\n", data.Information)}");
+
+            if (data.Output?.Count > 0)
+                parts.Add($"[Output]\n{string.Join("\n", data.Output)}");
+
+            return parts.Count > 0 ? string.Join("\n\n", parts) : "No diagnostic output available.";
         }
     }
 }
