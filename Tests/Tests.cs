@@ -251,8 +251,11 @@ namespace Tests
                 new ScriptStringExecutionParameterDetails("DomainName") { Value = LDAPDomainName },
                 new ScriptStringExecutionParameterDetails("DomainAlias") { Value = LDAPDomainNetBIOSName },
                 new ScriptStringExecutionParameterDetails("Name") { Value = "FCT:New-LDAPSIdentitySource" },
-                new ScriptSecureStringExecutionParameterDetails("SSLCertificatesSasUrl") { SecureValue = SSLCertificatesSAS },
             };
+
+            // SSLCertificatesSasUrl is intentionally omitted — the cmdlet will fetch certs
+            // directly from the domain controllers, which is the more reliable path
+            // (confirmed working via Debug-LDAPSIdentitySources).
 
             // add the parameters to the execution data
             foreach (var p in parameters) executionData.Parameters.Add(p);
