@@ -10,23 +10,51 @@
 trigger:
     - main
 
+# Pipeline parameters — override these for manual runs to target a different SDDC or package version.
+parameters:
+    - name: subscriptionName
+      displayName: Azure Subscription (service connection name)
+      type: string
+      default: FCT Pipeline
+    - name: resourceGroupName
+      displayName: Resource Group Name
+      type: string
+      default: AVS-Management-FCT
+    - name: privateCloudName
+      displayName: Private Cloud Name
+      type: string
+      default: AVS-Management-FCT
+    - name: location
+      displayName: Azure Region
+      type: string
+      default: canadacentral
+    - name: identityPackageVersion
+      displayName: Identity Package Version (e.g. "1.*" or "1.1.526")
+      type: string
+      default: "1.*"
+    - name: isFirstRun
+      displayName: First Run (provisions ADDS)
+      type: boolean
+      default: false
+
 # This pipeline will run on an Ubuntu virtual machine.
 pool:
     vmImage: ubuntu-latest
 
 # Define the variables that will be used in the pipeline. The password and the username must be defined in the pipeline secret variables!
 variables:
-    resourceGroupName: AVS-Management-FCT # Your Resource Group Name
-    privateCloudName: AVS-Management-FCT # Your Private Cloud Name
-    location: canadacentral # Your Azure Region
-    subscriptionName: FCT Pipeline # Your Azure Subscription Name
+    resourceGroupName: ${{ parameters.resourceGroupName }}
+    privateCloudName: ${{ parameters.privateCloudName }}
+    location: ${{ parameters.location }}
+    subscriptionName: ${{ parameters.subscriptionName }}
+    identityPackageVersion: ${{ parameters.identityPackageVersion }}
     baseDNGroups: CN=Users,DC=contoso,DC=com # Your Base DN Groups
     baseDNUsers: CN=Users,DC=contoso,DC=com # Your Base DN Users
     domainName: contoso.com # FQDN of Your Domain
     domainNetBIOSName: contoso # Your BIOS Domain Name
     primaryURL: ldap://VM.contoso.com:389 # Your Primary URL
     secondaryURL: ldaps://VM.contoso.com:636 # Your Secondary (LDAPS) URL
-    isFirstRun: false # Set to 'true' to install ADDS
+    isFirstRun: ${{ parameters.isFirstRun }}
     system.debug: true # Set to 'true' to enable diagnostic tracing
 
 # Define the steps that will be executed in the pipeline.
@@ -157,6 +185,7 @@ steps:
               echo "##vso[task.setvariable variable=DOMAINNAME]$(domainName)"
               echo "##vso[task.setvariable variable=LDAPUSERNAME]$(LDAPusername)"
               echo "##vso[task.setvariable variable=LDAPPASSWORD]$(LDAPpassword)"
+              echo "##vso[task.setvariable variable=IDENTITYPACKAGEVERSION]$(identityPackageVersion)"
 
     # Verify private cloud health and SSH availability before running LDAPS tests.
     # The New-LDAPSIdentitySource cmdlet requires $SSH_Sessions (AVS runtime lazy dictionary)

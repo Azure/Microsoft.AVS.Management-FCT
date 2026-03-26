@@ -29,6 +29,7 @@ namespace Tests
         protected static readonly string? SSLCertificatesSAS = Environment.GetEnvironmentVariable("SSLCERTIFICATESAS");
         protected static readonly string? LDAPDomainNetBIOSName = Environment.GetEnvironmentVariable("DOMAINNETBIOSNAME");
         protected static readonly string? LDAPDomainName = Environment.GetEnvironmentVariable("DOMAINNAME");
+        protected static readonly string IdentityPackageVersion = Environment.GetEnvironmentVariable("IDENTITYPACKAGEVERSION") ?? "1.*";
         protected static readonly DefaultAzureCredential AzureCredential = new();
     }
 
@@ -94,9 +95,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "Get-CloudAdminGroups";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
@@ -130,9 +129,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "New-LDAPIdentitySource";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
@@ -182,9 +179,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "Remove-ExternalIdentitySources";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
@@ -219,9 +214,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "New-LDAPSIdentitySource";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
@@ -301,9 +294,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "Debug-LDAPSIdentitySources";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
@@ -361,9 +352,7 @@ namespace Tests
         {
             // set up the cmdlet and cmldet resource
             string packageName = "Microsoft.AVS.Identity";
-            string majorPackageVersion = "1";
-            string packageVersion = $"{majorPackageVersion}.*";
-            string armPackageName = $"{packageName}@{packageVersion}";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
             string cmdletName = "Remove-ExternalIdentitySources";
             var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
             ResourceIdentifier CmdletResourceId = new(resourceId);
