@@ -22,10 +22,13 @@ Overview of important files in this repository:
 | File/folder           | Description                                       |
 |-----------------------|---------------------------------------------------|
 | `Tests/Tests.cs`      | C# file containing the functional tests           |
-| `azure-pipelines.yml` | Azure Pipelines definition file                   |
+| `azure-pipelines.yml` | Azure Pipelines definition file (push/scheduled)  |
+| `.github/workflows/fct-dispatch.yml` | GitHub Actions workflow for PR validation dispatch |
 | `main.bicep`          | Bicep template for deploying an AVS private cloud |
 | `adds_install.ps1`    | ADDS setup and installation script for AD/LDAP    |
 | `ldaps_setup.ps1`     | LDAPS certificate setup script for AD/LDAPS       |
+| `docs/contributor-fct-guide.md` | Guide for validating Identity PRs with FCT |
+| `docs/trigger-fct.sh` | Script to manually trigger FCT dispatch           |
 
 You can find functional tests for the following **Run Commands** in this repository:
 *  Get-CloudAdminGroups
@@ -131,6 +134,21 @@ After executing the pipeline, you should be able to see the results in the `Test
 * Since the initial deployment is the only one that is needed for AD/LDAP seed scripting, for each run after the initial deployment you can set the `isFirstRun` variable to false in the `azure-pipelines.yml` file. This will skip the initial ADDS setup steps.
 * You can modify the `adds_install.ps1` script to fit your needs. You can add/modify users, groups, etc. 
 * If anything breaks, please retry with `system.debug` turned on. This will increase the logging and will help you understand what went wrong. For quick iterative development, local development is recommended. You can set up another branch in your repository to which you can push your code, so that you can execute the pipeline manually to test your code without merging into main.
+
+## **PR Validation (Identity Package)**
+
+The FCT pipeline can be triggered automatically from Identity package PR
+builds to validate pre-release cmdlets against a Lab SDDC.
+
+- **Automated**: Identity CI fires a `repository_dispatch` event on each PR
+  build, passing the package version. FCT runs against the Lab SDDC and
+  reports results as a commit status check.
+- **Manual**: Use the GitHub Actions UI or the
+  [`docs/trigger-fct.sh`](docs/trigger-fct.sh) script to trigger a run with
+  a custom package version.
+
+See the [Contributor FCT Guide](docs/contributor-fct-guide.md) for full details
+on setup, manual triggers, and troubleshooting.
 
 ## **Additional Resources**
 

@@ -1,0 +1,174 @@
+# Triggered by repository_dispatch from the Identity package CI,
+# or manually via workflow_dispatch. Runs FCT tests against a Lab SDDC
+# with the specified Identity package version.
+name: "FCT – Identity PR Validation"
+
+on:
+  repository_dispatch:
+    types: [run-fct]
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: "Identity package version (e.g. 1.1.526)"
+        required: false
+        default: "1.*"
+      resource_group:
+        description: "Resource group name"
+        required: false
+        default: "AVS-Management-FCT-Lab"
+      private_cloud:
+        description: "Private cloud name"
+        required: false
+        default: "AVS-Management-FCT-Lab"
+      location:
+        description: "Azure region"
+        required: false
+        default: "canadacentral"
+
+permissions:
+  id-token: write
+  contents: read
+  statuses: write
+
+env:
+  RESOURCE_GROUP: ${{ github.event.client_payload.resource_group || github.event.inputs.resource_group || 'AVS-Management-FCT-Lab' }}
+  PRIVATE_CLOUD: ${{ github.event.client_payload.private_cloud || github.event.inputs.private_cloud || 'AVS-Management-FCT-Lab' }}
+  LOCATION: ${{ github.event.client_payload.location || github.event.inputs.location || 'canadacentral' }}
+  IDENTITY_PACKAGE_VERSION: ${{ github.event.client_payload.package_version || github.event.inputs.package_version || '1.*' }}
+  DOMAIN_NAME: "contoso.com"
+  DOMAIN_NETBIOS: "contoso"
+  BASE_DN_GROUPS: "CN=Users,DC=contoso,DC=com"
+  BASE_DN_USERS: "CN=Users,DC=contoso,DC=com"
+  PRIMARY_URL: "ldap://VM.contoso.com:389"
+  SECONDARY_URL: "ldaps://VM.contoso.com:636"
+
+jobs:
+  fct:
+    name: Run FCT Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log dispatch payload
+        run: |
+          echo "### FCT Dispatch" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package version**: ${{ env.IDENTITY_PACKAGE_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Private cloud**: ${{ env.PRIVATE_CLOUD }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resource group**: ${{ env.RESOURCE_GROUP }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.event.action || 'workflow_dispatch' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: ${{ github.event.client_payload.sha || github.sha }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload LDAPS Certificate and generate SAS URL
+        id: cert
+        run: |
+          storageAccountName=$(az storage account list \
+              -g "${{ env.RESOURCE_GROUP }}" \
+              --query "[0].name" -o tsv)
+
+          az vm run-command invoke \
+              -g "${{ env.RESOURCE_GROUP }}" -n VM \
+              --command-id RunPowerShellScript \
+              --scripts "Get-Content -Path C:\ldaps_cert.cer -Raw" \
+              --query "value[0].message" -o tsv > cert_output.txt
+
+          grep -v "Enable succeeded" cert_output.txt \
+              | sed '/^\[stdout\]/d; /^\[stderr\]/d; /^$/d' > ldaps_cert.cer
+
+          az storage blob upload \
+              --account-name "$storageAccountName" \
+              --container-name certificates \
+              --name ldaps_cert.cer \
+              --file ldaps_cert.cer \
+              --auth-mode login \
+              --overwrite
+
+          expiry=$(date -u -d "+1 hour" '+%Y-%m-%dT%H:%MZ')
+          accountKey=$(az storage account keys list \
+              --account-name "$storageAccountName" \
+              -g "${{ env.RESOURCE_GROUP }}" \
+              --query "[0].value" -o tsv)
+
+          sasUrl=$(az storage blob generate-sas \
+              --account-name "$storageAccountName" \
+              --account-key "$accountKey" \
+              --container-name certificates \
+              --name ldaps_cert.cer \
+              --permissions r \
+              --expiry "$expiry" \
+              --full-uri \
+              -o tsv)
+
+          echo "sas_url=$sasUrl" >> "$GITHUB_OUTPUT"
+
+      - name: Set commit status (pending)
+        if: github.event.client_payload.sha
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.client_payload.sha,
+              state: 'pending',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: 'FCT tests running...',
+              context: 'fct/identity-validation'
+            });
+
+      - name: Run FCT Tests
+        env:
+          SUBSCRIPTIONID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          RESOURCEGROUPNAME: ${{ env.RESOURCE_GROUP }}
+          PRIVATECLOUDNAME: ${{ env.PRIVATE_CLOUD }}
+          BASEDNGROUPS: ${{ env.BASE_DN_GROUPS }}
+          BASEDNUSERS: ${{ env.BASE_DN_USERS }}
+          PRIMARYURL: ${{ env.PRIMARY_URL }}
+          SECONDARYURL: ${{ env.SECONDARY_URL }}
+          SSLCERTIFICATESAS: ${{ steps.cert.outputs.sas_url }}
+          DOMAINNETBIOSNAME: ${{ env.DOMAIN_NETBIOS }}
+          DOMAINNAME: ${{ env.DOMAIN_NAME }}
+          LDAPUSERNAME: ${{ secrets.LDAP_USERNAME }}
+          LDAPPASSWORD: ${{ secrets.LDAP_PASSWORD }}
+          IDENTITYPACKAGEVERSION: ${{ env.IDENTITY_PACKAGE_VERSION }}
+        run: dotnet test --logger trx --results-directory TestResults
+
+      - name: Publish Test Results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: "FCT Results (Identity ${{ env.IDENTITY_PACKAGE_VERSION }})"
+          path: "TestResults/**/*.trx"
+          reporter: dotnet-trx
+
+      - name: Set commit status (result)
+        if: always() && github.event.client_payload.sha
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const success = '${{ job.status }}' === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.client_payload.sha,
+              state: success ? 'success' : 'failure',
+              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              description: success ? 'FCT tests passed' : 'FCT tests failed',
+              context: 'fct/identity-validation'
+            });
