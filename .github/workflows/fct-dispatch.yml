@@ -24,6 +24,11 @@ on:
         description: "Azure region"
         required: false
         default: "canadacentral"
+      is_first_run:
+        description: "First run — provisions ADDS, DNS, LDAPS on a fresh SDDC"
+        required: false
+        type: boolean
+        default: "false"
 
 permissions:
   id-token: write
@@ -39,6 +44,7 @@ env:
   PRIVATE_CLOUD: ${{ github.event.client_payload.private_cloud || github.event.inputs.private_cloud || 'AVS-Management-FCT-Lab' }}
   LOCATION: ${{ github.event.client_payload.location || github.event.inputs.location || 'canadacentral' }}
   IDENTITY_PACKAGE_VERSION: ${{ github.event.client_payload.package_version || github.event.inputs.package_version || '1.*' }}
+  IS_FIRST_RUN: ${{ github.event.client_payload.is_first_run || github.event.inputs.is_first_run || 'false' }}
   DOMAIN_NAME: "contoso.com"
   DOMAIN_NETBIOS: "contoso"
   BASE_DN_GROUPS: "CN=Users,DC=contoso,DC=com"
@@ -104,6 +110,64 @@ jobs:
               --private-cloud "${{ env.PRIVATE_CLOUD }}" \
               --query "[?contains(name, 'Identity')].{name:name, version:properties.version}" \
               -o json
+
+      - name: Update DNS Service
+        if: env.IS_FIRST_RUN == 'true'
+        run: |
+          az vmware workload-network dns-service update \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --private-cloud "${{ env.PRIVATE_CLOUD }}" \
+              --dns-service dns-forwarder \
+              --fqdn-zones "${{ env.DOMAIN_NAME }}"
+
+      - name: Install ADDS
+        if: env.IS_FIRST_RUN == 'true'
+        run: |
+          sleep 60
+          az vm run-command invoke \
+              -g "${{ env.RESOURCE_GROUP }}" -n VM \
+              --command-id RunPowerShellScript \
+              --scripts @adds_install.ps1 \
+              --parameters \
+                "DomainName=${{ env.DOMAIN_NAME }}" \
+                "DomainNetBIOSName=${{ env.DOMAIN_NETBIOS }}" \
+                "Username=${{ secrets.LDAP_USERNAME }}" \
+                "Password=${{ secrets.LDAP_PASSWORD }}" \
+              --verbose
+
+      - name: Restart VM
+        if: env.IS_FIRST_RUN == 'true'
+        run: |
+          az vm run-command invoke \
+              -g "${{ env.RESOURCE_GROUP }}" -n VM \
+              --command-id RunPowerShellScript \
+              --scripts "Restart-Computer -Force" \
+              --verbose
+
+      - name: Configure ADDS
+        if: env.IS_FIRST_RUN == 'true'
+        run: |
+          sleep 60
+          az vm run-command invoke \
+              -g "${{ env.RESOURCE_GROUP }}" -n VM \
+              --command-id RunPowerShellScript \
+              --scripts @adds_install.ps1 \
+              --parameters \
+                "DomainName=${{ env.DOMAIN_NAME }}" \
+                "DomainNetBIOSName=${{ env.DOMAIN_NETBIOS }}" \
+                "Username=${{ secrets.LDAP_USERNAME }}" \
+                "Password=${{ secrets.LDAP_PASSWORD }}" \
+              --verbose
+
+      - name: Setup LDAPS Certificate
+        if: env.IS_FIRST_RUN == 'true'
+        run: |
+          az vm run-command invoke \
+              -g "${{ env.RESOURCE_GROUP }}" -n VM \
+              --command-id RunPowerShellScript \
+              --scripts @ldaps_setup.ps1 \
+              --parameters "DomainName=${{ env.DOMAIN_NAME }}" \
+              --verbose
 
       - name: Upload LDAPS Certificate and generate SAS URL
         id: cert
