@@ -23,7 +23,7 @@ on:
       location:
         description: "Azure region"
         required: false
-        default: "canadacentral"
+        default: "eastus"
       is_first_run:
         description: "First run — provisions ADDS, DNS, LDAPS on a fresh SDDC"
         required: false
@@ -42,7 +42,7 @@ concurrency:
 env:
   RESOURCE_GROUP: ${{ github.event.client_payload.resource_group || github.event.inputs.resource_group || 'AVS-Management-FCT-Lab' }}
   PRIVATE_CLOUD: ${{ github.event.client_payload.private_cloud || github.event.inputs.private_cloud || 'AVS-Management-FCT-Lab' }}
-  LOCATION: ${{ github.event.client_payload.location || github.event.inputs.location || 'canadacentral' }}
+  LOCATION: ${{ github.event.client_payload.location || github.event.inputs.location || 'eastus' }}
   IDENTITY_PACKAGE_VERSION: ${{ github.event.client_payload.package_version || github.event.inputs.package_version || '1.*' }}
   IS_FIRST_RUN: ${{ github.event.client_payload.is_first_run || github.event.inputs.is_first_run || 'false' }}
   DOMAIN_NAME: "contoso.com"

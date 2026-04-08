@@ -14,7 +14,7 @@ set -euo pipefail
 PACKAGE_VERSION="${1:?Usage: $0 <package_version> [resource_group] [private_cloud] [location]}"
 RESOURCE_GROUP="${2:-AVS-Management-FCT-Lab}"
 PRIVATE_CLOUD="${3:-AVS-Management-FCT-Lab}"
-LOCATION="${4:-canadacentral}"
+LOCATION="${4:-eastus}"
 
 : "${GITHUB_TOKEN:?Set GITHUB_TOKEN with repo scope on Azure/Microsoft.AVS.Management-FCT}"
 

@@ -6,6 +6,9 @@ param password string
 param private_cloud_name string
 param domain string
 
+@description('VM size for the domain controller. Override if the default is unavailable in the target region.')
+param vm_size string = 'Standard_B2als_v2'
+
 @description('Creates an AVS private cloud and a DNS FQDN zone.')
 resource private_cloud 'Microsoft.AVS/privateClouds@2023-09-01' = {
   name: private_cloud_name
@@ -76,7 +79,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   location: location
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_B2als_v2'
+      vmSize: vm_size
     }
     storageProfile: {
       imageReference: {

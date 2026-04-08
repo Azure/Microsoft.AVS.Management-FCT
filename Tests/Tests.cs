@@ -122,6 +122,38 @@ namespace Tests
         }
 
         /// <summary>
+        /// Removes any leftover external identity sources so the suite is idempotent.
+        /// Without this, New-LDAPIdentitySource fails if a previous run left state behind.
+        /// </summary>
+        [Test, Order(0)]
+        public async Task ScriptExecution_CleanupExistingIdentitySources()
+        {
+            string packageName = "Microsoft.AVS.Identity";
+            string armPackageName = $"{packageName}@{IdentityPackageVersion}";
+            string cmdletName = "Remove-ExternalIdentitySources";
+            var resourceId = $"/subscriptions/{AzureSubscriptionId}/resourceGroups/{AzureResourceGroup}/providers/Microsoft.AVS/privateClouds/{AzurePrivateCloudName}/scriptPackages/{armPackageName}/scriptCmdlets/{cmdletName}";
+            ResourceIdentifier CmdletResourceId = new(resourceId);
+
+            Random r = new();
+            int randomNumber = r.Next(1, 5000);
+            ResourceIdentifier ExecutionNameId = new($"FCT:{AzureResourceGroup}-cleanup-{randomNumber}");
+
+            var executionData = new ScriptExecutionData
+            {
+                ScriptCmdletId = CmdletResourceId,
+                Retention = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(30)),
+                Timeout = System.Xml.XmlConvert.ToString(TimeSpan.FromMinutes(2))
+            };
+
+            ScriptExecutionCollection Executions = PrivateCloudResource!.GetScriptExecutions();
+            var executionResource = (await Executions.CreateOrUpdateAsync(WaitUntil.Completed, ExecutionNameId, executionData)).Value;
+            var executionResponse = executionResource.Data;
+
+            Assert.That(executionResponse.ProvisioningState, Is.EqualTo(ScriptExecutionProvisioningState.Succeeded),
+                $"Cleanup ({cmdletName}) should succeed but state is: {executionResponse.ProvisioningState}");
+        }
+
+        /// <summary>
         /// Async method that tests the script execution of New-LDAPIdentitySource. This test must be run before the Remove-ExternalIdentitySources test.
         /// </summary>
         [Test, Order(1)]

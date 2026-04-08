@@ -130,13 +130,13 @@ Deploy using the existing `main.bicep`:
 
 ```bash
 # Create resource group
-az group create --name AVS-Management-FCT-Lab --location canadacentral
+az group create --name AVS-Management-FCT-Lab --location eastus
 
 # Deploy infrastructure (~5-6 hours for initial provisioning)
 az deployment group create \
     --resource-group AVS-Management-FCT-Lab \
     --template-file main.bicep \
-    --parameters location=canadacentral \
+    --parameters location=eastus \
                  username=<LDAP_USERNAME> \
                  password=<LDAP_PASSWORD> \
                  domain=contoso.com \
