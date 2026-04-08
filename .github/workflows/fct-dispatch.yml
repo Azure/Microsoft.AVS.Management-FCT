@@ -77,6 +77,34 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: ARM Deployment
+        run: |
+          az deployment group create \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --template-file main.bicep \
+              --parameters location="${{ env.LOCATION }}" \
+                           username="${{ secrets.LDAP_USERNAME }}" \
+                           password="${{ secrets.LDAP_PASSWORD }}" \
+                           domain="${{ env.DOMAIN_NAME }}" \
+                           private_cloud_name="${{ env.PRIVATE_CLOUD }}"
+
+      - name: Verify Private Cloud Health
+        run: |
+          echo "=== Private Cloud Status ==="
+          az vmware private-cloud show \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "${{ env.PRIVATE_CLOUD }}" \
+              --query "{status:provisioningState, internet:properties.internet}" \
+              -o json
+
+          echo ""
+          echo "=== Script Packages (Identity) ==="
+          az vmware script-package list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --private-cloud "${{ env.PRIVATE_CLOUD }}" \
+              --query "[?contains(name, 'Identity')].{name:name, version:properties.version}" \
+              -o json
+
       - name: Upload LDAPS Certificate and generate SAS URL
         id: cert
         run: |
