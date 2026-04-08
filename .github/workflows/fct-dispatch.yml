@@ -30,6 +30,10 @@ permissions:
   contents: read
   statuses: write
 
+concurrency:
+  group: fct-${{ github.event.client_payload.private_cloud || github.event.inputs.private_cloud || 'AVS-Management-FCT-Lab' }}
+  cancel-in-progress: false
+
 env:
   RESOURCE_GROUP: ${{ github.event.client_payload.resource_group || github.event.inputs.resource_group || 'AVS-Management-FCT-Lab' }}
   PRIVATE_CLOUD: ${{ github.event.client_payload.private_cloud || github.event.inputs.private_cloud || 'AVS-Management-FCT-Lab' }}

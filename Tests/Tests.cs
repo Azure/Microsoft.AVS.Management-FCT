@@ -27,8 +27,6 @@ namespace Tests
         protected static readonly string? LDAPPrimaryUrl = Environment.GetEnvironmentVariable("PRIMARYURL");
         protected static readonly string? LDAPSecondaryUrl = Environment.GetEnvironmentVariable("SECONDARYURL");
         protected static readonly string? SSLCertificatesSAS = Environment.GetEnvironmentVariable("SSLCERTIFICATESAS");
-        protected static readonly string? LDAPSecondaryUrl = Environment.GetEnvironmentVariable("SECONDARYURL");
-        protected static readonly string? SSLCertificatesSAS = Environment.GetEnvironmentVariable("SSLCERTIFICATESAS");
         protected static readonly string? LDAPDomainNetBIOSName = Environment.GetEnvironmentVariable("DOMAINNETBIOSNAME");
         protected static readonly string? LDAPDomainName = Environment.GetEnvironmentVariable("DOMAINNAME");
         protected static readonly string IdentityPackageVersion = Environment.GetEnvironmentVariable("IDENTITYPACKAGEVERSION") ?? "1.*";
