@@ -181,6 +181,7 @@ steps:
               echo "##vso[task.setvariable variable=BASEDNUSERS]$(baseDNUsers)"
               echo "##vso[task.setvariable variable=PRIMARYURL]$(primaryURL)"
               echo "##vso[task.setvariable variable=SECONDARYURL]$(secondaryURL)"
+              echo "##vso[task.setvariable variable=SECONDARYURL]$(secondaryURL)"
               echo "##vso[task.setvariable variable=DOMAINNETBIOSNAME]$(domainNetBIOSName)"
               echo "##vso[task.setvariable variable=DOMAINNAME]$(domainName)"
               echo "##vso[task.setvariable variable=LDAPUSERNAME]$(LDAPusername)"
