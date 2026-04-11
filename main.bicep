@@ -7,7 +7,7 @@ param private_cloud_name string
 param domain string
 
 @description('VM size for the domain controller. Override if the default is unavailable in the target region.')
-param vm_size string = 'Standard_B2s'
+param vm_size string = 'Standard_D2as_v4'
 
 @description('Creates an AVS private cloud and a DNS FQDN zone.')
 resource private_cloud 'Microsoft.AVS/privateClouds@2023-09-01' = {
