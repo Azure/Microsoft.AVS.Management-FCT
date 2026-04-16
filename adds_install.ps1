@@ -57,4 +57,37 @@ function Install-ADDS {
     }
 }
 
+<#
+.SYNOPSIS
+    Hardens LDAP channel binding on the domain controller (ADV190023 / KB4034879).
+.DESCRIPTION
+    Sets the LdapEnforceChannelBinding registry value to 1 (when supported) under
+    HKLM\SYSTEM\CurrentControlSet\Services\NTDS\Parameters. This mitigates
+    CVE ADV190023 (QID 91564) by requiring LDAP channel binding tokens when
+    TLS is negotiated, preventing relay attacks.
+    Value meanings:
+      0 = Disabled (vulnerable)
+      1 = When supported (recommended — compatible with all AVS identity sources)
+      2 = Always required (may break clients that don't send CBT)
+#>
+function Set-LdapChannelBinding {
+    $RegPath = "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters"
+    $RegName = "LdapEnforceChannelBinding"
+
+    if (-not (Test-Path $RegPath)) {
+        Write-Host "[Set-LdapChannelBinding] NTDS Parameters key not found — skipping (AD DS may not be installed yet)."
+        return
+    }
+
+    $current = Get-ItemProperty -Path $RegPath -Name $RegName -ErrorAction SilentlyContinue
+    if ($current -and $current.$RegName -ge 1) {
+        Write-Host "[Set-LdapChannelBinding] Already set to $($current.$RegName) — no change needed."
+        return
+    }
+
+    Set-ItemProperty -Path $RegPath -Name $RegName -Value 1 -Type DWord
+    Write-Host "[Set-LdapChannelBinding] LdapEnforceChannelBinding set to 1 (when supported). ADV190023 mitigated."
+}
+
 Install-ADDS
+Set-LdapChannelBinding
