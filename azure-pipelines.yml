@@ -39,6 +39,7 @@ steps:
 
     - task: AzureCLI@2
       displayName: ARM Deployment
+      condition: eq(variables.isFirstRun, true)
       inputs:
           azureSubscription: $(subscriptionName)
           scriptType: bash
