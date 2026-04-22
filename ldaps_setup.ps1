@@ -53,6 +53,14 @@ function Install-LDAPSCertificate {
 
     Write-Host "[Install-LDAPSCertificate] Certificate exported to $CertPath"
 
+    # Add cert to Trusted Root store so Schannel includes it in the TLS certificate chain.
+    # Without this, AVS rejects the self-signed cert with "incorrect format" during LDAPS connectivity checks.
+    $RootStore = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root", "LocalMachine")
+    $RootStore.Open("ReadWrite")
+    $RootStore.Add($Certificate)
+    $RootStore.Close()
+    Write-Host "[Install-LDAPSCertificate] Certificate added to Trusted Root store."
+
     # Open Windows Firewall for LDAPS (port 636)
     New-NetFirewallRule -DisplayName "LDAPS" -Direction Inbound -Protocol TCP -LocalPort 636 -Action Allow -ErrorAction SilentlyContinue
     Write-Host "[Install-LDAPSCertificate] Firewall rule for port 636 added."
