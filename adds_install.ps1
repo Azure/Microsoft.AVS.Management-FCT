@@ -57,4 +57,37 @@ function Install-ADDS {
     }
 }
 
+<#
+.SYNOPSIS
+    Mitigates ADV190023 (QID 91564) by enabling LDAP channel binding.
+.DESCRIPTION
+    Sets LdapEnforceChannelBinding to 1 (when supported) under
+    HKLM\SYSTEM\CurrentControlSet\Services\NTDS\Parameters.
+    Value 1 = accept channel binding when provided but do not require it
+    (compatible with clients that don't yet support CBT).
+    Requires KB4034879 or later to be effective.
+.LINK
+    https://support.microsoft.com/en-us/topic/2020-ldap-channel-binding-and-ldap-signing-requirements-for-windows-ef185fb8-00f7-167d-744c-f299a66fc00a
+#>
+function Set-LdapChannelBinding {
+    $RegPath  = "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters"
+    $RegName  = "LdapEnforceChannelBinding"
+    $RegValue = 1   # 0 = disabled, 1 = when supported, 2 = always
+
+    if (-not (Test-Path $RegPath)) {
+        Write-Warning "[Set-LdapChannelBinding] NTDS parameters key not found — skipping (DC may not be promoted yet)."
+        return
+    }
+
+    $current = Get-ItemProperty -Path $RegPath -Name $RegName -ErrorAction SilentlyContinue
+    if ($null -ne $current -and $current.$RegName -eq $RegValue) {
+        Write-Host "[Set-LdapChannelBinding] LdapEnforceChannelBinding is already set to $RegValue."
+        return
+    }
+
+    Set-ItemProperty -Path $RegPath -Name $RegName -Value $RegValue -Type DWord
+    Write-Host "[Set-LdapChannelBinding] LdapEnforceChannelBinding set to $RegValue (ADV190023 mitigation)."
+}
+
 Install-ADDS
+Set-LdapChannelBinding
