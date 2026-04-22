@@ -45,11 +45,13 @@ function Install-LDAPSCertificate {
 
     Write-Host "[Install-LDAPSCertificate] Certificate created with thumbprint: $($Certificate.Thumbprint)"
 
-    # Export the certificate as Base64-encoded .cer file
-    Export-Certificate -Cert $Certificate -FilePath $CertPath -Type CERT
-    $CertBase64 = [Convert]::ToBase64String((Get-Content $CertPath -Encoding Byte))
-    $CertPem = "-----BEGIN CERTIFICATE-----`n$CertBase64`n-----END CERTIFICATE-----"
-    Set-Content -Path $CertPath -Value $CertPem
+    # Export the certificate as properly-formatted Base64 PEM (.cer)
+    # Use certutil -encode which produces standard 64-char line-wrapped PEM
+    $DerPath = "$CertPath.der"
+    Export-Certificate -Cert $Certificate -FilePath $DerPath -Type CERT -Force
+    Remove-Item $CertPath -Force -ErrorAction SilentlyContinue
+    certutil -encode $DerPath $CertPath | Out-Null
+    Remove-Item $DerPath -Force -ErrorAction SilentlyContinue
 
     Write-Host "[Install-LDAPSCertificate] Certificate exported to $CertPath"
 
