@@ -89,7 +89,7 @@ namespace Tests
         /// <summary>
         /// Async method that tests the script execution CRUD operations of Get-CloudAdminGroups.
         /// </summary>
-        [Test]
+        [Test, Category("CRUD"), Category("Identity")]
         public async Task ScriptExecution_CRUD()
         {
             // set up the cmdlet and cmldet resource
@@ -125,7 +125,7 @@ namespace Tests
         /// <summary>
         /// Async method that tests the script execution of New-LDAPIdentitySource. This test must be run before the Remove-ExternalIdentitySources test.
         /// </summary>
-        [Test, Order(1)]
+        [Test, Order(1), Category("LDAP"), Category("Identity")]
         public async Task ScriptExecution_NewLDAPIdentitySource()
         {
             // set up the cmdlet and cmldet resource
@@ -177,7 +177,7 @@ namespace Tests
         /// <summary>
         /// Async method that tests the script execution of Remove-ExternalIdentitySources.
         /// </summary>
-        [Test, Order(2)]
+        [Test, Order(2), Category("LDAP"), Category("Identity")]
         public async Task ScriptExecution_RemoveExternalIdentitySources()
         {
             // set up the cmdlet and cmldet resource
@@ -214,7 +214,7 @@ namespace Tests
         /// <summary>
         /// Async method that tests the script execution of New-LDAPSIdentitySource. This test must be run after the Remove-ExternalIdentitySources test.
         /// </summary>
-        [Test, Order(3)]
+        [Test, Order(3), Category("LDAPS"), Category("Identity")]
         public async Task ScriptExecution_NewLDAPSIdentitySource()
         {
             // set up the cmdlet and cmldet resource
@@ -296,7 +296,7 @@ namespace Tests
         /// Async method that tests the script execution of Debug-LDAPSIdentitySources.
         /// Runs after LDAPS identity source has been added to verify the configuration is healthy.
         /// </summary>
-        [Test, Order(4)]
+        [Test, Order(4), Category("LDAPS"), Category("Identity")]
         public async Task ScriptExecution_DebugLDAPSIdentitySources()
         {
             // set up the cmdlet and cmldet resource
@@ -356,7 +356,7 @@ namespace Tests
         /// <summary>
         /// Async method that tests the script execution of Remove-ExternalIdentitySources after LDAPS identity source has been added.
         /// </summary>
-        [Test, Order(5)]
+        [Test, Order(5), Category("LDAPS"), Category("Identity")]
         public async Task ScriptExecution_RemoveLDAPSExternalIdentitySources()
         {
             // set up the cmdlet and cmldet resource
